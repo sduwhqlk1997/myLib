@@ -877,7 +877,8 @@ namespace myFEM
                             Idx i = startLocal + idxCol;
                             Idx iLocal = idxRow * nBaseFun + idxCol;
                             Eigen::Vector<Scalar, Eigen::Dynamic> temp = value_coef.array() * refMat.row(iLocal).reshaped().array();
-                            Scalar val = temp.dot(Gauss.weight);
+                            Scalar val = temp.transpose() * Gauss.weight;
+                            // temp.dot(Gauss.weight);
                             val *= myMesh.Jacobi(n);
                             if (varDiff_test != -1)
                                 val *= myMesh.Jacobi_inv(n, varDiff_test);
@@ -912,7 +913,8 @@ namespace myFEM
                         Idx i = startLocal + idxCol;
                         Idx iLocal = idxRow * nBaseFun + idxCol;
                         Eigen::Vector<Scalar, Eigen::Dynamic> temp = value_coef.array() * refMat.row(iLocal).reshaped().array();
-                        Scalar val = temp.dot(Gauss.weight);
+                        // Scalar val = temp.dot(Gauss.weight);
+                        Scalar val = temp.transpose() * Gauss.weight;
                         val *= myMesh.Jacobi(n);
                         if (varDiff_test != -1)
                             val *= myMesh.Jacobi_inv(n, varDiff_test);
