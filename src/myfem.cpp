@@ -1053,7 +1053,7 @@ namespace myFEM
         }
         return true;
     }
-    std::pair<std::vector<Idx>, std::vector<Idx>> findCommonDof(Mat_d dofIdx1, Mat_d dofIdx2, std::pair<int, double> interFace, double scale)
+    std::pair<std::vector<Idx>, std::vector<Idx>> findCommonDof(const Mat_d &dofIdx1, const Mat_d &dofIdx2, std::pair<int, double> interFace, double scale)
     {
         // dofIdx1, dofIdx2:自由度索引，一行一个自由度. interFace:两个区域的交界面信息，first为维度，second为交界面坐标
         std::unordered_map<Vec_d, Idx, PointNdHash, PointNdEqual> mapB;
@@ -1083,7 +1083,7 @@ namespace myFEM
         }
         return {Idx1, Idx2};
     }
-    mergeFEMMesh_info mergeFEMMesh(mesh myMesh1, mesh myMesh2,
+    mergeFEMMesh_info mergeFEMMesh(const mesh &myMesh1, const mesh &myMesh2,
                                    std::pair<int, double> interFace,
                                    double scale)
     {

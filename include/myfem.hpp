@@ -104,13 +104,13 @@ namespace myFEM
     {
         bool operator()(const Vec_d &a, const Vec_d &b) const;
     };
-    std::pair<std::vector<Idx>, std::vector<Idx>> findCommonDof(Mat_d dofIdx1, Mat_d dofIdx2, std::pair<int, double> interFace, double scale = 1.0);
+    std::pair<std::vector<Idx>, std::vector<Idx>> findCommonDof(const Mat_d &dofIdx1, const Mat_d &dofIdx2, std::pair<int, double> interFace, double scale = 1.0);
     struct mergeFEMMesh_info
     {
         mesh myMesh;                     // 拼接后的网格
         std::vector<Idx> nodes2_old2new; // 二号网格的网格点的旧序号与新序号的对应关系，行号为旧序号，值为新序号
     };
-    mergeFEMMesh_info mergeFEMMesh(mesh myMesh1, mesh myMesh2,
+    mergeFEMMesh_info mergeFEMMesh(const mesh &myMesh1, const mesh &myMesh2,
                                    std::pair<int, double> interFace, double scale); // 拼接两个有限元网格
     template <typename Scalar>
     SparseMat_t<Scalar> mergeSparseMat(const SparseMat_t<Scalar> &K1, const SparseMat_t<Scalar> &K2,
