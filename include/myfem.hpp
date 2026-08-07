@@ -105,6 +105,13 @@ namespace myFEM
         bool operator()(const Vec_d &a, const Vec_d &b) const;
     };
     std::pair<std::vector<Idx>, std::vector<Idx>> findCommonDof(Mat_d dofIdx1, Mat_d dofIdx2, std::pair<int, double> interFace, double scale = 1.0);
+    struct mergeFEMMesh_info
+    {
+        mesh myMesh;                     // 拼接后的网格
+        std::vector<Idx> nodes2_old2new; // 二号网格的网格点的旧序号与新序号的对应关系，行号为旧序号，值为新序号
+    };
+    mergeFEMMesh_info mergeFEMMesh(mesh myMesh1, mesh myMesh2,
+                                   std::pair<int, double> interFace, double scale); // 拼接两个有限元网格
     template <typename Scalar>
     SparseMat_t<Scalar> mergeSparseMat(const SparseMat_t<Scalar> &K1, const SparseMat_t<Scalar> &K2,
                                        const std::vector<Idx> &idx1, const std::vector<Idx> &idx2);
@@ -116,7 +123,15 @@ namespace myFEM
                               const Mat_t<Scalar> &dofIdx2,
                               const std::vector<Idx> &idx2);
     template <typename Scalar>
-    std::pair<SparseMat_t<Scalar>, Mat_d>
+    struct mergeFEMMat_info
+    {
+        SparseMat_t<Scalar> K;
+        Mat_d dofIdx;
+        std::vector<Idx> idx2;
+        std::vector<Idx> idx2;
+    };
+    template <typename Scalar>
+    mergeFEMMat_info<Scalar>
     mergeFEMMat(const Mat_d &dofIdx1, const Mat_d &dofIdx2,
                 const SparseMat_t<Scalar> &K1, const SparseMat_t<Scalar> &K2,
                 std::pair<int, double> interFace, double scale);
@@ -130,8 +145,4 @@ namespace myFEM
                    SparseMat_t<Scalar1> K1, SparseMat_t<Scalar1> K2,
                    Vec_t<Scalar2> F1, Vec_t<Scalar2> F2,
                    std::pair<int, double> interFace, double scale);
-};
-namespace SAW
-{
-    // TODO
 };

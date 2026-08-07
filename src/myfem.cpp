@@ -1083,6 +1083,53 @@ namespace myFEM
         }
         return {Idx1, Idx2};
     }
+    mergeFEMMesh_info mergeFEMMesh(mesh myMesh1, mesh myMesh2,
+                                   std::pair<int, double> interFace,
+                                   double scale)
+    {
+        auto [Idx1, Idx2] = findCommonDof(myMesh1.nodes, myMesh2.nodes, interFace, scale);
+        std::vector<Idx> mark(myMesh2.nPts, -1);
+        for (Idx i = 0; i < Idx2.size(); ++i)
+        {
+            mark[Idx2[i]] = Idx1[i];
+        }
+        Idx count = 0;
+        for (Idx i = 0; i < mark.size(); ++i)
+        {
+            if (mark[i] != -1)
+                ++count;
+            else
+            {
+                mark[i] = myMesh1.nPts + i - count;
+            }
+        }
+        mesh myMesh;
+        myMesh.nPts = myMesh1.nPts + myMesh2.nPts - Idx1.size();
+        myMesh.nElems = myMesh1.nElems + myMesh2.nElems;
+
+        myMesh.nodes.resize(myMesh.nPts, 3);
+        myMesh.elems.resize(myMesh.nElems, myMesh1.elems.cols());
+        myMesh.meshtype = myMesh1.meshtype;
+        myMesh.elemtype = myMesh1.elemtype;
+        myMesh.nodes.topRows(myMesh1.nPts) = myMesh1.nodes;
+        myMesh.elems << myMesh1.elems, myMesh2.elems;
+
+        // 填入网格点
+        for (Idx i = 0; i < mark.size(); ++i)
+        {
+            if (mark[i] >= myMesh1.nPts)
+                myMesh.nodes.row(mark[i]) = myMesh2.nodes.row(i);
+        }
+        // 填入单元
+        for (Idx i = myMesh1.nElems; i < myMesh.nElems; ++i)
+        {
+            for (Idx j = 0; j < myMesh.elems.cols(); ++j)
+            {
+                myMesh.elems(i, j) = mark[myMesh.elems(i, j)];
+            }
+        }
+        return mergeFEMMesh_info{myMesh, mark};
+    }
     template <typename Scalar>
     SparseMat_t<Scalar> mergeSparseMat(const SparseMat_t<Scalar> &K1, const SparseMat_t<Scalar> &K2,
                                        const std::vector<Idx> &idx1, const std::vector<Idx> &idx2)
@@ -1193,7 +1240,7 @@ namespace myFEM
         return dofIdx;
     }
     template <typename Scalar>
-    std::pair<SparseMat_t<Scalar>, Mat_d>
+    mergeFEMMat_info<Scalar>
     mergeFEMMat(const Mat_d &dofIdx1, const Mat_d &dofIdx2,
                 const SparseMat_t<Scalar> &K1, const SparseMat_t<Scalar> &K2,
                 std::pair<int, double> interFace, double scale)
@@ -1203,7 +1250,7 @@ namespace myFEM
         auto [idx1, idx2] = findCommonDof(dofIdx1, dofIdx2, interFace, scale);
         K = mergeSparseMat<Scalar>(K1, K2, idx1, idx2);
         dofIdx = mergeDofIdx<double>(dofIdx1, dofIdx2, idx2);
-        return {K, dofIdx};
+        return mergeFEMMat_info<Scalar>{K, dofIdx, idx1, idx2};
     }
 
     /*模板定义*/
@@ -1227,11 +1274,11 @@ namespace myFEM
     assembleVec<Complex>(const Fun_t<Complex> &,
                          const mesh &,
                          const refGaussInfo &);
-    template std::pair<SparseMat_t<double>, Mat_d>
+    template mergeFEMMat_info<double>
     mergeFEMMat<double>(const Mat_d &dofIdx1, const Mat_d &dofIdx2,
                         const SparseMat_t<double> &K1, const SparseMat_t<double> &K2,
                         std::pair<int, double> interFace, double scale);
-    template std::pair<SparseMat_t<Complex>, Mat_d>
+    template mergeFEMMat_info<Complex>
     mergeFEMMat<Complex>(const Mat_d &dofIdx1, const Mat_d &dofIdx2,
                          const SparseMat_t<Complex> &K1, const SparseMat_t<Complex> &K2,
                          std::pair<int, double> interFace, double scale);
