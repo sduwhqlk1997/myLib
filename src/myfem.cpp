@@ -1128,7 +1128,7 @@ namespace myFEM
                 myMesh.elems(i, j) = mark[myMesh.elems(i, j)];
             }
         }
-        return mergeFEMMesh_info{myMesh, mark};
+        return mergeFEMMesh_info{myMesh, Idx2.size(), mark};
     }
     template <typename Scalar>
     SparseMat_t<Scalar> mergeSparseMat(const SparseMat_t<Scalar> &K1, const SparseMat_t<Scalar> &K2,

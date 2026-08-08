@@ -108,6 +108,7 @@ namespace myFEM
     struct mergeFEMMesh_info
     {
         mesh myMesh;                     // 拼接后的网格
+        size_t nInterPts;                // 交界面点数
         std::vector<Idx> nodes2_old2new; // 二号网格的网格点的旧序号与新序号的对应关系，行号为旧序号，值为新序号
     };
     mergeFEMMesh_info mergeFEMMesh(const mesh &myMesh1, const mesh &myMesh2,
@@ -127,7 +128,7 @@ namespace myFEM
     {
         SparseMat_t<Scalar> K;
         Mat_d dofIdx;
-        std::vector<Idx> idx2;
+        std::vector<Idx> idx1;
         std::vector<Idx> idx2;
     };
     template <typename Scalar>
