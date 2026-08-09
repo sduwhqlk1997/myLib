@@ -9,6 +9,7 @@ namespace wrMatFile
     using DenseMat = Eigen::MatrixXd;
     using DenseMatcd = Eigen::MatrixXcd;
     using Vec = Eigen::VectorXcd;
+    using Vec_i = Eigen::Vector<Eigen::Index, Eigen::Dynamic>;
     // 文件读写都在主线程进行
     void readSparseMatFromMatlab(const char *filename, const char *varname, SparseMat &K);
     void readDenseMatFromMatlab(const char *filename, const char *varname, DenseMat &K);
@@ -20,4 +21,5 @@ namespace wrMatFile
     void saveEigenSparseMat2Mat(const char *filename, Eigen::SparseMatrix<double, Eigen::ColMajor> &K);
     void saveEigenVec2Mat(const char *filename, Vec &V);
     void saveEigenVec2Mat(const char *filename, Eigen::VectorXd &V);
+    void saveEigenVec2Mat(const char *filename, Vec_i &V);
 }

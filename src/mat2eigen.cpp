@@ -725,6 +725,61 @@ namespace wrMatFile
         Mat_VarFree(matvar);
         Mat_Close(matfp);
     }
+    void saveEigenVec2Mat(const char *filename, Vec_i &V)
+    {
+        if (!filename)
+            throw std::invalid_argument("filename is nullptr");
+
+        mat_t *matfp = Mat_CreateVer(filename, nullptr, MAT_FT_MAT5);
+        if (!matfp)
+            throw std::runtime_error("Failed to create mat file.");
+
+        size_t dims[2] = {static_cast<size_t>(V.size()), 1};
+
+        // 变量名使用文件名（去掉扩展名）
+        std::string varname(filename);
+        size_t dot = varname.find('.');
+        if (dot != std::string::npos)
+            varname = varname.substr(0, dot);
+
+        // 需要将 Eigen::Index 转换为 double 或合适的 MATLAB 类型
+        // 如果 Eigen::Index 是 int64_t，可能需要转换为 double
+        std::vector<double> data(V.size());
+        for (Eigen::Index i = 0; i < V.size(); ++i)
+        {
+            data[i] = static_cast<double>(V[i]);
+        }
+
+        matvar_t *matvar = Mat_VarCreate(
+            varname.c_str(),
+            MAT_C_DOUBLE,
+            MAT_T_DOUBLE,
+            2,
+            dims,
+            data.data(),
+            0);
+
+        if (!matvar)
+        {
+            Mat_Close(matfp);
+            throw std::runtime_error("Mat_VarCreate failed.");
+        }
+
+        int err = Mat_VarWrite(
+            matfp,
+            matvar,
+            MAT_COMPRESSION_NONE);
+
+        if (err != 0)
+        {
+            Mat_VarFree(matvar);
+            Mat_Close(matfp);
+            throw std::runtime_error("Mat_VarWrite failed.");
+        }
+
+        Mat_VarFree(matvar);
+        Mat_Close(matfp);
+    }
     // template void saveEigenDenseMatReal2Mat(const char *filename, Eigen::MatrixBase<double> &K);
     // template void saveEigenDenseMatReal2Mat(const char *filename, Eigen::MatrixBase<Eigen::Index> &K);
 }
