@@ -3,6 +3,7 @@
 #include <Eigen/SparseCore>
 #include <complex>
 #include <vector>
+#include <set>
 namespace myEigen // 基于Eigen开发的一些常用矩阵操作
 {
     using Idx = Eigen::Index;
@@ -14,4 +15,7 @@ namespace myEigen // 基于Eigen开发的一些常用矩阵操作
     SparseMat_t<Scalar> blkdiag(const std::vector<SparseMat_t<Scalar>> &matBloks);
     template <typename Scalar>
     SparseMat_t<Scalar> blkMat(const std::vector<std::vector<SparseMat_t<Scalar>>> &matBloks);
+    template <typename Scalar>
+    SparseMat_t<Scalar>
+    delColRowSpMat(const SparseMat_t<Scalar> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
 };

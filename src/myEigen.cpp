@@ -123,9 +123,105 @@ namespace myEigen
         result.setFromTriplets(triplets.begin(), triplets.end());
         return result;
     }
+    template <typename Scalar>
+    SparseMat_t<Scalar>
+    delColRowSpMat(
+        const SparseMat_t<Scalar> &K,
+        const std::set<Eigen::Index> &idxDel,
+        Eigen::Index flag)
+    {
+        using SpMat = Eigen::SparseMatrix<Scalar, Eigen::ColMajor>;
+        using Index = Eigen::Index;
 
+        const Index nRows = K.rows();
+        const Index nCols = K.cols();
+
+        if (flag < 0 || flag > 2)
+        {
+            throw std::invalid_argument(
+                "Flag只能为0、1、2，分别代表行、列、行和列");
+        }
+
+        // 标记需要删除的行/列
+        std::vector<bool> delRow(nRows, false);
+        std::vector<bool> delCol(nCols, false);
+
+        for (const auto idx : idxDel)
+        {
+            if (flag == 0 || flag == 2)
+            {
+                if (idx < 0 || idx >= nRows)
+                {
+                    throw std::out_of_range(
+                        "delColRowSpMat: row index out of range.");
+                }
+                delRow[idx] = true;
+            }
+
+            if (flag == 1 || flag == 2)
+            {
+                if (idx < 0 || idx >= nCols)
+                {
+                    throw std::out_of_range(
+                        "delColRowSpMat: column index out of range.");
+                }
+                delCol[idx] = true;
+            }
+        }
+
+        // 原始行/列 -> 新矩阵行/列的映射
+        std::vector<Index> rowMap(nRows, -1);
+        std::vector<Index> colMap(nCols, -1);
+
+        Index newRows = 0;
+        Index newCols = 0;
+
+        for (Index i = 0; i < nRows; ++i)
+        {
+            if (!delRow[i])
+            {
+                rowMap[i] = newRows++;
+            }
+        }
+
+        for (Index j = 0; j < nCols; ++j)
+        {
+            if (!delCol[j])
+            {
+                colMap[j] = newCols++;
+            }
+        }
+
+        SpMat result(newRows, newCols);
+
+        // 预估非零元数量
+        result.reserve(K.nonZeros());
+
+        for (Index k = 0; k < K.outerSize(); ++k)
+        {
+            for (typename SpMat::InnerIterator it(K, k); it; ++it)
+            {
+                const Index i = it.row();
+                const Index j = it.col();
+
+                // 如果该元素所在的行或列被删除，则跳过
+                if (delRow[i] || delCol[j])
+                {
+                    continue;
+                }
+
+                result.insertBack(rowMap[i], colMap[j]) = it.value();
+            }
+        }
+
+        result.makeCompressed();
+
+        return result;
+    }
     template SparseMat_t<Complex> blkdiag(const std::vector<SparseMat_t<Complex>> &matBloks);
     template SparseMat_t<double> blkdiag(const std::vector<SparseMat_t<double>> &matBloks);
     template SparseMat_t<Complex> blkMat(const std::vector<std::vector<SparseMat_t<Complex>>> &matBloks);
     template SparseMat_t<double> blkMat(const std::vector<std::vector<SparseMat_t<double>>> &matBloks);
+    template SparseMat_t<double> delColRowSpMat(const SparseMat_t<double> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
+    template SparseMat_t<Complex> delColRowSpMat(const SparseMat_t<Complex> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
 };
