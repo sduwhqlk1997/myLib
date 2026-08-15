@@ -125,97 +125,61 @@ namespace myEigen
     }
     template <typename Scalar>
     SparseMat_t<Scalar>
-    delColRowSpMat(
-        const SparseMat_t<Scalar> &K,
-        const std::set<Eigen::Index> &idxDel,
-        Eigen::Index flag)
+    delSpMatRowOrCol(const SparseMat_t<Scalar> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag)
     {
-        using SpMat = Eigen::SparseMatrix<Scalar, Eigen::ColMajor>;
-        using Index = Eigen::Index;
-
-        const Index nRows = K.rows();
-        const Index nCols = K.cols();
-
-        if (flag < 0 || flag > 2)
+        Vec_t<Idx> mark;
+        SparseMat_t<Scalar> result;
+        std::vector<Eigen::Triplet<Scalar, Idx>> triplets;
+        triplets.reserve(K.nonZeros());
+        if (flag == 0) // 删除行
         {
-            throw std::invalid_argument(
-                "Flag只能为0、1、2，分别代表行、列、行和列");
-        }
-
-        // 标记需要删除的行/列
-        std::vector<bool> delRow(nRows, false);
-        std::vector<bool> delCol(nCols, false);
-
-        for (const auto idx : idxDel)
-        {
-            if (flag == 0 || flag == 2)
+            result.resize(K.rows() - idxDel.size(), K.cols());
+            mark.resize(K.rows());
+            Idx count = 0;
+            for (Idx i = 0; i < K.rows(); ++i)
             {
-                if (idx < 0 || idx >= nRows)
+                if (idxDel.find(i) != idxDel.end())
+                    mark(i) = -1;
+                else
                 {
-                    throw std::out_of_range(
-                        "delColRowSpMat: row index out of range.");
+                    mark(i) = count;
+                    ++count;
                 }
-                delRow[idx] = true;
             }
-
-            if (flag == 1 || flag == 2)
+            for (Idx col = 0; col < K.outerSize(); ++col)
             {
-                if (idx < 0 || idx >= nCols)
+                for (typename SparseMat_t<Scalar>::InnerIterator iter(K, col); iter; ++iter)
                 {
-                    throw std::out_of_range(
-                        "delColRowSpMat: column index out of range.");
+                    if (mark(iter.row()) != -1)
+                        triplets.emplace_back(mark(iter.row()), iter.col(), iter.value());
                 }
-                delCol[idx] = true;
             }
         }
-
-        // 原始行/列 -> 新矩阵行/列的映射
-        std::vector<Index> rowMap(nRows, -1);
-        std::vector<Index> colMap(nCols, -1);
-
-        Index newRows = 0;
-        Index newCols = 0;
-
-        for (Index i = 0; i < nRows; ++i)
+        else if (flag == 1) // 删除列
         {
-            if (!delRow[i])
+            result.resize(K.rows(), K.cols() - idxDel.size());
+            mark.resize(K.cols());
+            Idx count = 0;
+            for (Idx i = 0; i < K.cols(); ++i)
             {
-                rowMap[i] = newRows++;
-            }
-        }
-
-        for (Index j = 0; j < nCols; ++j)
-        {
-            if (!delCol[j])
-            {
-                colMap[j] = newCols++;
-            }
-        }
-
-        SpMat result(newRows, newCols);
-
-        // 预估非零元数量
-        result.reserve(K.nonZeros());
-
-        for (Index k = 0; k < K.outerSize(); ++k)
-        {
-            for (typename SpMat::InnerIterator it(K, k); it; ++it)
-            {
-                const Index i = it.row();
-                const Index j = it.col();
-
-                // 如果该元素所在的行或列被删除，则跳过
-                if (delRow[i] || delCol[j])
+                if (idxDel.find(i) != idxDel.end())
+                    mark(i) = -1;
+                else
                 {
-                    continue;
+                    mark(i) = count;
+                    ++count;
                 }
-
-                result.insertBack(rowMap[i], colMap[j]) = it.value();
+            }
+            for (Idx col = 0; col < K.outerSize(); ++col)
+            {
+                for (typename SparseMat_t<Scalar>::InnerIterator iter(K, col); iter; ++iter)
+                {
+                    if (mark(iter.col()) != -1)
+                        triplets.emplace_back(iter.row(), mark(iter.col()), iter.value());
+                }
             }
         }
-
-        result.makeCompressed();
-
+        result.setFromTriplets(triplets.begin(), triplets.end());
         return result;
     }
     template <typename Scalar>
@@ -403,8 +367,6 @@ namespace myEigen
     template SparseMat_t<double> blkdiag(const std::vector<SparseMat_t<double>> &matBloks);
     template SparseMat_t<Complex> blkMat(const std::vector<std::vector<SparseMat_t<Complex>>> &matBloks);
     template SparseMat_t<double> blkMat(const std::vector<std::vector<SparseMat_t<double>>> &matBloks);
-    template SparseMat_t<double> delColRowSpMat(const SparseMat_t<double> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
-    template SparseMat_t<Complex> delColRowSpMat(const SparseMat_t<Complex> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
     template Mat_t<double> delColRowDenMat(const Mat_t<double> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
     template Mat_t<Idx> delColRowDenMat(const Mat_t<Idx> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
     template Mat_t<Complex> delColRowDenMat(const Mat_t<Complex> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
@@ -416,4 +378,6 @@ namespace myEigen
     template Vec_t<Complex> delValDenVec(const Vec_t<Complex> &V, const std::set<Eigen::Index> &idxDel);
     template SparseMat_t<double> spMatAddColOrRow(SparseMat_t<double> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);
     template SparseMat_t<Complex> spMatAddColOrRow(SparseMat_t<Complex> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);
+    template SparseMat_t<double> delSpMatRowOrCol(const SparseMat_t<double> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
+    template SparseMat_t<Complex> delSpMatRowOrCol(const SparseMat_t<Complex> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
 };
