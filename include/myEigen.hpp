@@ -22,13 +22,11 @@ namespace myEigen // 基于Eigen开发的一些常用矩阵操作
     template <typename Scalar>
     SparseMat_t<Scalar>
     delSpMatRowOrCol(const SparseMat_t<Scalar> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
-    template <typename Scalar>
-    Mat_t<Scalar>
-    delColRowDenMat(const Mat_t<Scalar> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag); // 删除稠密矩阵的行列
+    template <typename Scale>
+    Mat_t<Scale>
+    removeRowsDenseMat(const Mat_t<Scale> &mat, const std::vector<Idx> &delIdx);
     template <typename Scalar>
     SparseMat_t<Scalar> spMatAddColOrRow(SparseMat_t<Scalar> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag); // flag 0,1,2依次对应行、列、行列相加
     // template <typename Scalar>
     // void addSpMatColOrRow(SparseMat_t<Scalar> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag); // flag 0,1,2依次对应行、列、行列相加
-    template <typename Scalar>
-    Vec_t<Scalar> delValDenVec(const Vec_t<Scalar> &V, const std::set<Eigen::Index> &idxDel); // 删除稠密向量的元素
 };

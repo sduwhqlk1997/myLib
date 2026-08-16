@@ -182,109 +182,51 @@ namespace myEigen
         result.setFromTriplets(triplets.begin(), triplets.end());
         return result;
     }
-    template <typename Scalar>
-    Mat_t<Scalar>
-    delColRowDenMat(const Mat_t<Scalar> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag)
+    template <typename Scale>
+    Mat_t<Scale>
+    removeRowsDenseMat(const Mat_t<Scale> &mat, const std::vector<Idx> &delIdx)
     {
-        using Index = Eigen::Index;
-        const Index nRows = K.rows();
-        const Index nCols = K.cols();
-
-        // 检查 flag
-        if (flag < 0 || flag > 2)
+        std::vector<Idx> mark(mat.rows(), 0);
+        for (Idx i = 0; i < delIdx.size(); ++i)
+            mark[delIdx[i]] = -1;
+        Idx nSize = mat.rows() - delIdx.size();
+        Mat_t<Scale> mat_new(nSize, mat.cols());
+        Idx count = 0;
+        for (Idx i = 0; i < mark.size(); ++i)
         {
-            throw std::invalid_argument(
-                "Flag只能为0、1、2，分别代表行、列、行和列.");
-        }
-
-        // ============================================================
-        // flag == 0：删除行
-        // ============================================================
-        if (flag == 0)
-        {
-            const Index newRows = nRows - static_cast<Index>(idxDel.size());
-
-            Mat_t<Scalar> result(newRows, nCols);
-
-            Index newRow = 0;
-
-            for (Index i = 0; i < nRows; ++i)
+            if (mark[i] != -1)
             {
-                if (idxDel.find(i) != idxDel.end())
-                {
-                    continue;
-                }
-
-                result.row(newRow) = K.row(i);
-                ++newRow;
+                mat_new.row(count) = mat.row(i);
+                count++;
             }
-
-            return result;
         }
-
-        // ============================================================
-        // flag == 1：删除列
-        // ============================================================
-        if (flag == 1)
-        {
-            const Index newCols = nCols - static_cast<Index>(idxDel.size());
-
-            Mat_t<Scalar> result(nRows, newCols);
-
-            Index newCol = 0;
-
-            for (Index j = 0; j < nCols; ++j)
-            {
-                if (idxDel.find(j) != idxDel.end())
-                {
-                    continue;
-                }
-
-                result.col(newCol) = K.col(j);
-                ++newCol;
-            }
-
-            return result;
-        }
-
-        // ============================================================
-        // flag == 2：同时删除行和列
-        // ============================================================
-        const Index newRows = nRows - static_cast<Index>(idxDel.size());
-        const Index newCols = nCols - static_cast<Index>(idxDel.size());
-
-        Mat_t<Scalar> result(newRows, newCols);
-
-        Index newRow = 0;
-
-        for (Index i = 0; i < nRows; ++i)
-        {
-
-            if (idxDel.find(i) != idxDel.end())
-            {
-                continue;
-            }
-
-            Index newCol = 0;
-
-            for (Index j = 0; j < nCols; ++j)
-            {
-
-                if (idxDel.find(j) != idxDel.end())
-                {
-                    continue;
-                }
-
-                result(newRow, newCol) = K(i, j);
-
-                ++newCol;
-            }
-
-            ++newRow;
-        }
-
-        return result;
+        return mat_new;
     }
+    template <typename Derived>
+    Mat_t<Derived>
+    RemoveElementsVec(const Eigen::MatrixBase<Derived> &vec, const std::vector<Idx> &indices_to_remove)
+    {
+        const int n = vec.size();
+        std::vector<bool> keep(n, true);
+
+        for (int idx : indices_to_remove)
+        {
+            if (idx >= 0 && idx < n)
+                keep[idx] = false;
+        }
+
+        std::vector<int> keep_idx;
+        keep_idx.reserve(n);
+        for (int i = 0; i < n; ++i)
+        {
+            if (keep[i])
+                keep_idx.push_back(i);
+        }
+
+        const Eigen::Map<const Eigen::VectorXi> idx_map(keep_idx.data(), static_cast<Eigen::Index>(keep_idx.size()));
+        return vec(idx_map);
+    }
+
     template <typename Scalar>
     SparseMat_t<Scalar> spMatAddColOrRow(SparseMat_t<Scalar> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag)
     {
@@ -339,45 +281,17 @@ namespace myEigen
         result.setFromTriplets(triplets.begin(), triplets.end());
         return result;
     }
-    template <typename Scalar>
-    Vec_t<Scalar> delValDenVec(const Vec_t<Scalar> &V, const std::set<Eigen::Index> &idxDel)
-    {
-        using Idx = Eigen::Index;
-        Idx n = V.size();
-
-        // 新向量长度
-        Idx newSize = n - static_cast<Idx>(idxDel.size());
-
-        Vec_t<Scalar> Vnew(newSize);
-
-        Idx count = 0;
-
-        for (Idx i = 0; i < n; ++i)
-        {
-            // 如果 i 不在删除集合中，则保留
-            if (idxDel.find(i) == idxDel.end())
-            {
-                Vnew(count++) = V(i);
-            }
-        }
-
-        return Vnew;
-    }
     template SparseMat_t<Complex> blkdiag(const std::vector<SparseMat_t<Complex>> &matBloks);
     template SparseMat_t<double> blkdiag(const std::vector<SparseMat_t<double>> &matBloks);
     template SparseMat_t<Complex> blkMat(const std::vector<std::vector<SparseMat_t<Complex>>> &matBloks);
     template SparseMat_t<double> blkMat(const std::vector<std::vector<SparseMat_t<double>>> &matBloks);
-    template Mat_t<double> delColRowDenMat(const Mat_t<double> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
-    template Mat_t<Idx> delColRowDenMat(const Mat_t<Idx> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
-    template Mat_t<Complex> delColRowDenMat(const Mat_t<Complex> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
     // template void addSpMatColOrRow(SparseMat_t<double> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);
     // template void addSpMatColOrRow(SparseMat_t<Complex> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);
-    template Vec_t<double> delValDenVec(const Vec_t<double> &V, const std::set<Eigen::Index> &idxDel);
-    template Vec_t<Idx> delValDenVec(const Vec_t<Idx> &V, const std::set<Eigen::Index> &idxDel);
-    template Vec_t<int> delValDenVec(const Vec_t<int> &V, const std::set<Eigen::Index> &idxDel);
-    template Vec_t<Complex> delValDenVec(const Vec_t<Complex> &V, const std::set<Eigen::Index> &idxDel);
     template SparseMat_t<double> spMatAddColOrRow(SparseMat_t<double> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);
     template SparseMat_t<Complex> spMatAddColOrRow(SparseMat_t<Complex> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);
     template SparseMat_t<double> delSpMatRowOrCol(const SparseMat_t<double> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
     template SparseMat_t<Complex> delSpMatRowOrCol(const SparseMat_t<Complex> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
+    template Mat_t<double> removeRowsDenseMat(const Mat_t<double> &mat, const std::vector<Idx> &delIdx);
+    template Mat_t<Complex> removeRowsDenseMat(const Mat_t<Complex> &mat, const std::vector<Idx> &delIdx);
+    template Mat_t<Idx> removeRowsDenseMat(const Mat_t<Idx> &mat, const std::vector<Idx> &delIdx);
 };
