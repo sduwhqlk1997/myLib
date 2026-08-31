@@ -1053,13 +1053,17 @@ namespace myFEM
         }
         return true;
     }
-    std::pair<std::vector<Idx>, std::vector<Idx>> findCommonDof(const Mat_d &dofIdx1, const Mat_d &dofIdx2, std::pair<int, double> interFace, double scale)
+    std::pair<std::vector<Idx>, std::vector<Idx>>
+    findCommonDof(const Mat_d &dofIdx1, const Mat_d &dofIdx2,
+                  std::pair<int, double> interFace, Idx searchStart1, Idx searchStart2, double scale)
     {
         // dofIdx1, dofIdx2:自由度索引，一行一个自由度. interFace:两个区域的交界面信息，first为维度，second为交界面坐标
+        // searchStart1：dofIdx1的扫描起点，用于确认前searchStart1个点不会与dofIdx2相交的情况，默认为0
+        // searchStart2：dofIdx2的扫描起点，用于确认前searchStart2个点不会与dofIdx1相交的情况，默认为0
         std::unordered_map<Vec_d, Idx, PointNdHash, PointNdEqual> mapB;
         mapB.reserve(static_cast<std::size_t>(dofIdx2.rows()));
         double eps = EPS * scale;
-        for (Idx j = 0; j < dofIdx2.rows(); ++j)
+        for (Idx j = searchStart2; j < dofIdx2.rows(); ++j)
         {
             if (almostEqual(dofIdx2(j, interFace.first), interFace.second, eps))
             {
@@ -1067,7 +1071,7 @@ namespace myFEM
             }
         }
         std::vector<Idx> Idx1, Idx2;
-        for (Idx i = 0; i < dofIdx1.rows(); ++i)
+        for (Idx i = searchStart1; i < dofIdx1.rows(); ++i)
         {
             if (!almostEqual(dofIdx1(i, interFace.first), interFace.second, eps))
             {

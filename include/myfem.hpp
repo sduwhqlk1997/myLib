@@ -104,7 +104,11 @@ namespace myFEM
     {
         bool operator()(const Vec_d &a, const Vec_d &b) const;
     };
-    std::pair<std::vector<Idx>, std::vector<Idx>> findCommonDof(const Mat_d &dofIdx1, const Mat_d &dofIdx2, std::pair<int, double> interFace, double scale = 1.0);
+    std::pair<std::vector<Idx>, std::vector<Idx>>
+    findCommonDof(const Mat_d &dofIdx1, const Mat_d &dofIdx2,
+                  std::pair<int, double> interFace,
+                  Idx searchStart1 = 0, Idx searchStart2 = 0,
+                  double scale = 1.0);
     struct mergeFEMMesh_info
     {
         mesh myMesh;                     // 拼接后的网格
