@@ -1055,7 +1055,8 @@ namespace myFEM
     }
     std::pair<std::vector<Idx>, std::vector<Idx>>
     findCommonDof(const Mat_d &dofIdx1, const Mat_d &dofIdx2,
-                  std::pair<int, double> interFace, Idx searchStart1, Idx searchStart2, double scale)
+                  std::pair<int, double> interFace,
+                  double scale = 1.0, Idx searchStart1 = 0, Idx searchStart2 = 0)
     {
         // dofIdx1, dofIdx2:自由度索引，一行一个自由度. interFace:两个区域的交界面信息，first为维度，second为交界面坐标
         // searchStart1：dofIdx1的扫描起点，用于确认前searchStart1个点不会与dofIdx2相交的情况，默认为0
