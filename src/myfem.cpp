@@ -7,7 +7,7 @@ namespace myFEM
 
     mesh genMesh3D(Mat_d dom, const Vec_d &xGrid,
                    const Vec_d &yGrid, const Vec_d &zGrid,
-                   meshType type)
+                   meshType type, bool ifOMP)
     {
         mesh myMesh;
         myMesh.Dom = dom;
@@ -31,9 +31,38 @@ namespace myFEM
             myMesh.nElems = nElems;
             myMesh.nPts = nNodes;
             myMesh.nodes.resize(nNodes, 3);
-#pragma omp parallel
+            if (ifOMP)
             {
+#pragma omp parallel
+                {
 #pragma omp for nowait
+                    for (int n = 0; n < nElems; ++n)
+                    {
+                        // 获取单元的三维编号
+                        Idx k = n / nElems_xy;                    // 单元的z编号
+                        Idx j = (n % nElems_xy) / (nx - 1);       // 单元的y编号
+                        Idx i = n - k * nElems_xy - j * (nx - 1); // 单元的x编号
+                        // 计算所有顶点的三维编号
+                        Mat_i idx3d_P(3, 8);
+                        idx3d_P << i, i + 1, i + 1, i, i, i + 1, i + 1, i,
+                            j, j, j + 1, j + 1, j, j, j + 1, j + 1,
+                            k, k, k, k, k + 1, k + 1, k + 1, k + 1;
+                        // 计算出顶点
+                        myMesh.elems.row(n) = idx3d_P.row(0) + idx3d_P.row(1) * nx + idx3d_P.row(2) * nNode_xy;
+                    }
+#pragma omp for
+                    for (int n = 0; n < nNodes; ++n)
+                    {
+                        Idx k = n / nNode_xy;              // 节点的z编号
+                        Idx j = (n % nNode_xy) / nx;       // 节点的y编号
+                        Idx i = n - k * nNode_xy - j * nx; // 节点的x编号
+                        myMesh.nodes.row(n) << xGrid(i), yGrid(j), zGrid(k);
+                    }
+                }
+            }
+            else
+            {
+#pragma omp simd
                 for (int n = 0; n < nElems; ++n)
                 {
                     // 获取单元的三维编号
@@ -48,7 +77,7 @@ namespace myFEM
                     // 计算出顶点
                     myMesh.elems.row(n) = idx3d_P.row(0) + idx3d_P.row(1) * nx + idx3d_P.row(2) * nNode_xy;
                 }
-#pragma omp for
+#pragma omp simd
                 for (int n = 0; n < nNodes; ++n)
                 {
                     Idx k = n / nNode_xy;              // 节点的z编号
@@ -68,7 +97,7 @@ namespace myFEM
     }
     mesh genFEMMesh3D(Mat_d dom, const Vec_d &xGrid,
                       const Vec_d &yGrid, const Vec_d &zGrid,
-                      elemType type)
+                      elemType type, bool ifOMP)
     {
         mesh myMesh;
         myMesh.elemtype = type;
@@ -80,17 +109,17 @@ namespace myFEM
         }
         case Q2:
         {
-            myMesh = genMesh3D(dom, xGrid, yGrid, zGrid, hex);
-            addEdgeMidPt(myMesh, xGrid, yGrid, zGrid);
-            addFaceMidPt(myMesh, xGrid, yGrid, zGrid);
-            addBodyMidPt(myMesh, xGrid, yGrid, zGrid);
+            myMesh = genMesh3D(dom, xGrid, yGrid, zGrid, hex, ifOMP);
+            addEdgeMidPt(myMesh, xGrid, yGrid, zGrid, ifOMP);
+            addFaceMidPt(myMesh, xGrid, yGrid, zGrid, ifOMP);
+            addBodyMidPt(myMesh, xGrid, yGrid, zGrid, ifOMP);
             break;
         }
         }
         return myMesh;
     }
     void addEdgeMidPt(mesh &myMesh, const Vec_d &xGrid,
-                      const Vec_d &yGrid, const Vec_d &zGrid)
+                      const Vec_d &yGrid, const Vec_d &zGrid, bool ifOMP)
     {
         const Vec_i *nPt = &myMesh.nXnYnZ;
         Idx nVertex = myMesh.nodes.rows(); // 网格顶点数
@@ -121,11 +150,95 @@ namespace myFEM
 
         Idx nElems_xy = ((*nPt)(0) - 1) * ((*nPt)(1) - 1);
         Idx nElems_x = (*nPt)(0) - 1;
-
-#pragma omp parallel
+        if (ifOMP)
         {
+#pragma omp parallel
+            {
 
 #pragma omp for collapse(2) nowait
+                for (int n = 0; n < myElem->rows(); ++n)
+                {
+                    for (int midType = 0; midType < 3; ++midType)
+                    {
+                        Idx k = n / nElems_xy;                    // 单元的z编号
+                        Idx j = (n % nElems_xy) / nElems_x;       // 单元的y编号
+                        Idx i = n - k * nElems_xy - j * nElems_x; // 单元的x编号
+                        switch (midType)
+                        {
+                        case 0:
+                        {
+                            Mat_i idx3d_Px(3, 4);
+                            idx3d_Px
+                                << i,
+                                i, i, i, // 与x轴平行的边上的中点
+                                j, j + 1, j, j + 1,
+                                k, k, k + 1, k + 1;
+                            elems.row(n).segment(0, 4) = idx3d_Px.row(0) +
+                                                         idx3d_Px.row(1) * nMidPtx_x +
+                                                         idx3d_Px.row(2) * nMidPtxy_x;
+                            elems.row(n).segment(0, 4).array() += startX;
+                            break;
+                        }
+                        case 1:
+                        {
+                            Mat_i idx3d_Py(3, 4);
+                            idx3d_Py
+                                << i,
+                                i + 1, i, i + 1, // 与y轴平行的边上的中点
+                                j, j, j, j,
+                                k, k, k + 1, k + 1;
+                            elems.row(n).segment(4, 4) = idx3d_Py.row(0) +
+                                                         idx3d_Py.row(1) * nMidPtx_y +
+                                                         idx3d_Py.row(2) * nMidPtxy_y;
+                            elems.row(n).segment(4, 4).array() += startY;
+                            break;
+                        }
+                        case 2:
+                        {
+                            Mat_i idx3d_Pz(3, 4);
+                            idx3d_Pz
+                                << i,
+                                i + 1, i, i + 1, // 与z轴平行的边上的中点
+                                j, j, j + 1, j + 1,
+                                k, k, k, k;
+                            elems.row(n).segment(8, 4) = idx3d_Pz.row(0) +
+                                                         idx3d_Pz.row(1) * nMidPtx_z +
+                                                         idx3d_Pz.row(2) * nMidPtxy_z;
+                            elems.row(n).segment(8, 4).array() += startZ;
+                            break;
+                        }
+                        }
+                    }
+                }
+#pragma omp for nowait // 填充与x轴平行边上的中点坐标
+                for (int n = 0; n < nMidPtx; ++n)
+                {
+                    Idx k = n / nMidPtxy_x;                     // 中点的z编号
+                    Idx j = (n % nMidPtxy_x) / nMidPtx_x;       // 中点的y编号
+                    Idx i = n - k * nMidPtxy_x - j * nMidPtx_x; // 中点的x编号
+                    nodes_x.row(n) << (xGrid(i) + xGrid(i + 1)) * 0.5, yGrid(j), zGrid(k);
+                }
+#pragma omp for nowait // 填充与y轴平行边上的中点坐标
+                for (int n = 0; n < nMidPty; ++n)
+                {
+                    Idx k = n / nMidPtxy_y;                     // 中点的z编号
+                    Idx j = (n % nMidPtxy_y) / nMidPtx_y;       // 中点的y编号
+                    Idx i = n - k * nMidPtxy_y - j * nMidPtx_y; // 中点的x编号
+                    nodes_y.row(n) << xGrid(i), (yGrid(j) + yGrid(j + 1)) * 0.5, zGrid(k);
+                }
+#pragma omp for // 填充与z轴平行边上的中点坐标
+                for (int n = 0; n < nMidPtz; ++n)
+                {
+                    Idx k = n / nMidPtxy_z;                     // 中点的z编号
+                    Idx j = (n % nMidPtxy_z) / nMidPtx_z;       // 中点的y编号
+                    Idx i = n - k * nMidPtxy_z - j * nMidPtx_z; // 中点的x编号
+                    nodes_z.row(n) << xGrid(i), yGrid(j), (zGrid(k) + zGrid(k + 1)) * 0.5;
+                }
+            }
+        }
+        else
+        {
+#pragma omp simd collapse(2)
             for (int n = 0; n < myElem->rows(); ++n)
             {
                 for (int midType = 0; midType < 3; ++midType)
@@ -180,7 +293,7 @@ namespace myFEM
                     }
                 }
             }
-#pragma omp for nowait // 填充与x轴平行边上的中点坐标
+#pragma omp simd // 填充与x轴平行边上的中点坐标
             for (int n = 0; n < nMidPtx; ++n)
             {
                 Idx k = n / nMidPtxy_x;                     // 中点的z编号
@@ -188,7 +301,7 @@ namespace myFEM
                 Idx i = n - k * nMidPtxy_x - j * nMidPtx_x; // 中点的x编号
                 nodes_x.row(n) << (xGrid(i) + xGrid(i + 1)) * 0.5, yGrid(j), zGrid(k);
             }
-#pragma omp for nowait // 填充与y轴平行边上的中点坐标
+#pragma omp simd // 填充与y轴平行边上的中点坐标
             for (int n = 0; n < nMidPty; ++n)
             {
                 Idx k = n / nMidPtxy_y;                     // 中点的z编号
@@ -196,7 +309,7 @@ namespace myFEM
                 Idx i = n - k * nMidPtxy_y - j * nMidPtx_y; // 中点的x编号
                 nodes_y.row(n) << xGrid(i), (yGrid(j) + yGrid(j + 1)) * 0.5, zGrid(k);
             }
-#pragma omp for // 填充与z轴平行边上的中点坐标
+#pragma omp simd // 填充与z轴平行边上的中点坐标
             for (int n = 0; n < nMidPtz; ++n)
             {
                 Idx k = n / nMidPtxy_z;                     // 中点的z编号
@@ -214,7 +327,7 @@ namespace myFEM
     }
 
     void addFaceMidPt(mesh &myMesh, const Vec_d &xGrid,
-                      const Vec_d &yGrid, const Vec_d &zGrid)
+                      const Vec_d &yGrid, const Vec_d &zGrid, bool ifOMP)
     {
         const Vec_i *nPt = &myMesh.nXnYnZ;
         Idx nVertex = myMesh.nodes.rows(); // 网格顶点数
@@ -245,11 +358,95 @@ namespace myFEM
 
         Idx nElems_xy = ((*nPt)(0) - 1) * ((*nPt)(1) - 1);
         Idx nElems_x = (*nPt)(0) - 1;
-
-#pragma omp parallel
+        if (ifOMP)
         {
+#pragma omp parallel
+            {
 
 #pragma omp for collapse(2) nowait
+                for (int n = 0; n < myElem->rows(); ++n)
+                {
+                    for (int midType = 0; midType < 3; ++midType)
+                    {
+                        Idx k = n / nElems_xy;                    // 单元的z编号
+                        Idx j = (n % nElems_xy) / nElems_x;       // 单元的y编号
+                        Idx i = n - k * nElems_xy - j * nElems_x; // 单元的x编号
+                        switch (midType)
+                        {
+                        case 0: // 与xz面平行的面的中点
+                        {
+                            Mat_i idx3d_Px(3, 2);
+                            idx3d_Px
+                                << i,
+                                i,
+                                j, j + 1,
+                                k, k;
+                            elems.row(n).segment(0, 2) = idx3d_Px.row(0) +
+                                                         idx3d_Px.row(1) * nMidPtx_x +
+                                                         idx3d_Px.row(2) * nMidPtxy_x;
+                            elems.row(n).segment(0, 2).array() += startX;
+                            break;
+                        }
+                        case 1: // 与yz面平行的面的中点
+                        {
+                            Mat_i idx3d_Py(3, 2);
+                            idx3d_Py
+                                << i,
+                                i + 1,
+                                j, j,
+                                k, k;
+                            elems.row(n).segment(2, 2) = idx3d_Py.row(0) +
+                                                         idx3d_Py.row(1) * nMidPtx_y +
+                                                         idx3d_Py.row(2) * nMidPtxy_y;
+                            elems.row(n).segment(2, 2).array() += startY;
+                            break;
+                        }
+                        case 2: // 与xy面平行的面的中点
+                        {
+                            Mat_i idx3d_Pz(3, 2);
+                            idx3d_Pz
+                                << i,
+                                i,
+                                j, j,
+                                k, k + 1;
+                            elems.row(n).segment(4, 2) = idx3d_Pz.row(0) +
+                                                         idx3d_Pz.row(1) * nMidPtx_z +
+                                                         idx3d_Pz.row(2) * nMidPtxy_z;
+                            elems.row(n).segment(4, 2).array() += startZ;
+                            break;
+                        }
+                        }
+                    }
+                }
+#pragma omp for nowait // 填充与x轴平行边上的中点坐标
+                for (int n = 0; n < nMidPtx; ++n)
+                {
+                    Idx k = n / nMidPtxy_x;                     // 中点的z编号
+                    Idx j = (n % nMidPtxy_x) / nMidPtx_x;       // 中点的y编号
+                    Idx i = n - k * nMidPtxy_x - j * nMidPtx_x; // 中点的x编号
+                    nodes_x.row(n) << (xGrid(i) + xGrid(i + 1)) * 0.5, yGrid(j), (zGrid(k) + zGrid(k + 1)) * 0.5;
+                }
+#pragma omp for nowait // 填充与y轴平行边上的中点坐标
+                for (int n = 0; n < nMidPty; ++n)
+                {
+                    Idx k = n / nMidPtxy_y;                     // 中点的z编号
+                    Idx j = (n % nMidPtxy_y) / nMidPtx_y;       // 中点的y编号
+                    Idx i = n - k * nMidPtxy_y - j * nMidPtx_y; // 中点的x编号
+                    nodes_y.row(n) << xGrid(i), (yGrid(j) + yGrid(j + 1)) * 0.5, (zGrid(k) + zGrid(k + 1)) * 0.5;
+                }
+#pragma omp for // 填充与z轴平行边上的中点坐标
+                for (int n = 0; n < nMidPtz; ++n)
+                {
+                    Idx k = n / nMidPtxy_z;                     // 中点的z编号
+                    Idx j = (n % nMidPtxy_z) / nMidPtx_z;       // 中点的y编号
+                    Idx i = n - k * nMidPtxy_z - j * nMidPtx_z; // 中点的x编号
+                    nodes_z.row(n) << (xGrid(i) + xGrid(i + 1)) * 0.5, (yGrid(j) + yGrid(j + 1)) * 0.5, zGrid(k);
+                }
+            }
+        }
+        else
+        {
+#pragma omp simd collapse(2)
             for (int n = 0; n < myElem->rows(); ++n)
             {
                 for (int midType = 0; midType < 3; ++midType)
@@ -304,7 +501,7 @@ namespace myFEM
                     }
                 }
             }
-#pragma omp for nowait // 填充与x轴平行边上的中点坐标
+#pragma omp simd // 填充与x轴平行边上的中点坐标
             for (int n = 0; n < nMidPtx; ++n)
             {
                 Idx k = n / nMidPtxy_x;                     // 中点的z编号
@@ -312,7 +509,7 @@ namespace myFEM
                 Idx i = n - k * nMidPtxy_x - j * nMidPtx_x; // 中点的x编号
                 nodes_x.row(n) << (xGrid(i) + xGrid(i + 1)) * 0.5, yGrid(j), (zGrid(k) + zGrid(k + 1)) * 0.5;
             }
-#pragma omp for nowait // 填充与y轴平行边上的中点坐标
+#pragma omp simd // 填充与y轴平行边上的中点坐标
             for (int n = 0; n < nMidPty; ++n)
             {
                 Idx k = n / nMidPtxy_y;                     // 中点的z编号
@@ -320,7 +517,7 @@ namespace myFEM
                 Idx i = n - k * nMidPtxy_y - j * nMidPtx_y; // 中点的x编号
                 nodes_y.row(n) << xGrid(i), (yGrid(j) + yGrid(j + 1)) * 0.5, (zGrid(k) + zGrid(k + 1)) * 0.5;
             }
-#pragma omp for // 填充与z轴平行边上的中点坐标
+#pragma omp simd // 填充与z轴平行边上的中点坐标
             for (int n = 0; n < nMidPtz; ++n)
             {
                 Idx k = n / nMidPtxy_z;                     // 中点的z编号
@@ -337,7 +534,7 @@ namespace myFEM
         myMesh.nodes = std::move(nodeTemp);
     }
     void addBodyMidPt(mesh &myMesh, const Vec_d &xGrid,
-                      const Vec_d &yGrid, const Vec_d &zGrid)
+                      const Vec_d &yGrid, const Vec_d &zGrid, bool ifOMP)
     {
         const Vec_i *nPt = &myMesh.nXnYnZ;
         Idx nVertex = myMesh.nodes.rows(); // 网格顶点数
@@ -349,16 +546,33 @@ namespace myFEM
         myMesh.nPts += nMidPt;
         Idx nElems_xy = ((*nPt)(0) - 1) * ((*nPt)(1) - 1);
         Idx nElems_x = (*nPt)(0) - 1;
-#pragma omp parallel for
-        for (int n = 0; n < myMesh.elems.rows(); ++n)
+        if (ifOMP)
         {
-            Idx k = n / nElems_xy;                    // 单元的z编号
-            Idx j = (n % nElems_xy) / nElems_x;       // 单元的y编号
-            Idx i = n - k * nElems_xy - j * nElems_x; // 单元的x编号
-            elems(n) = n + start;
-            nodes.row(n) << (xGrid(i) + xGrid(i + 1)) * 0.5,
-                (yGrid(j) + yGrid(j + 1)) * 0.5,
-                (zGrid(k) + zGrid(k + 1)) * 0.5;
+#pragma omp parallel for
+            for (int n = 0; n < myMesh.elems.rows(); ++n)
+            {
+                Idx k = n / nElems_xy;                    // 单元的z编号
+                Idx j = (n % nElems_xy) / nElems_x;       // 单元的y编号
+                Idx i = n - k * nElems_xy - j * nElems_x; // 单元的x编号
+                elems(n) = n + start;
+                nodes.row(n) << (xGrid(i) + xGrid(i + 1)) * 0.5,
+                    (yGrid(j) + yGrid(j + 1)) * 0.5,
+                    (zGrid(k) + zGrid(k + 1)) * 0.5;
+            }
+        }
+        else
+        {
+#pragma omp simd
+            for (int n = 0; n < myMesh.elems.rows(); ++n)
+            {
+                Idx k = n / nElems_xy;                    // 单元的z编号
+                Idx j = (n % nElems_xy) / nElems_x;       // 单元的y编号
+                Idx i = n - k * nElems_xy - j * nElems_x; // 单元的x编号
+                elems(n) = n + start;
+                nodes.row(n) << (xGrid(i) + xGrid(i + 1)) * 0.5,
+                    (yGrid(j) + yGrid(j + 1)) * 0.5,
+                    (zGrid(k) + zGrid(k + 1)) * 0.5;
+            }
         }
         Mat_i elemTemp(myMesh.elems.rows(), myMesh.elems.cols() + 1);
         elemTemp << myMesh.elems, elems;
@@ -472,7 +686,7 @@ namespace myFEM
         }
         return result;
     }
-    void genAffineInfo(mesh &myMesh)
+    void genAffineInfo(mesh &myMesh, bool ifOMP)
     {
         Idx nElems = myMesh.elems.rows();
         switch (myMesh.meshtype)
@@ -480,12 +694,25 @@ namespace myFEM
         case hex:
         {
             Mat_d a(nElems, 3);
-#pragma omp parallel for
-            for (int n = 0; n < nElems; ++n)
+            if (ifOMP)
             {
-                Vec_d P1 = myMesh.nodes.row(myMesh.elems(n, 0));
-                Vec_d P2 = myMesh.nodes.row(myMesh.elems(n, 6));
-                a.row(n) = (P2 - P1) * 0.5;
+#pragma omp parallel for
+                for (int n = 0; n < nElems; ++n)
+                {
+                    Vec_d P1 = myMesh.nodes.row(myMesh.elems(n, 0));
+                    Vec_d P2 = myMesh.nodes.row(myMesh.elems(n, 6));
+                    a.row(n) = (P2 - P1) * 0.5;
+                }
+            }
+            else
+            {
+#pragma omp simd
+                for (int n = 0; n < nElems; ++n)
+                {
+                    Vec_d P1 = myMesh.nodes.row(myMesh.elems(n, 0));
+                    Vec_d P2 = myMesh.nodes.row(myMesh.elems(n, 6));
+                    a.row(n) = (P2 - P1) * 0.5;
+                }
             }
             myMesh.Jacobi = a.array().rowwise().prod();
             myMesh.Jacobi_inv = 1.0 / a.array();
@@ -497,7 +724,7 @@ namespace myFEM
         }
         }
     }
-    refGaussInfo genRefGauss(Idx order, meshType meshtype, elemType elemtype)
+    refGaussInfo genRefGauss(Idx order, meshType meshtype, elemType elemtype, bool ifOMP)
     {
         refGaussInfo Gauss;
         Gauss.elemtype = elemtype;
@@ -560,9 +787,55 @@ namespace myFEM
         Gauss.phi.resize(4);
         for (int i = 0; i < 4; ++i)
             Gauss.phi[i].resize(nBaseFun, nPt);
-#pragma omp parallel
+        if (ifOMP)
         {
+#pragma omp parallel
+            {
 #pragma omp for collapse(3)
+                for (Idx i = 0; i < order; ++i)
+                {
+                    for (Idx j = 0; j < order; ++j)
+                    {
+                        for (Idx k = 0; k < order; ++k)
+                        {
+                            Idx idxPt = i + j * order + k * nPt_xy;
+                            Gauss.pt.row(idxPt) << x(i), x(j), x(k);
+                            Gauss.weight(idxPt) = h(i) * h(j) * h(k);
+                        }
+                    }
+                }
+#pragma omp for collapse(3)
+                for (Idx i = 0; i < 4; ++i) // 导数
+                {
+                    for (Idx j = 0; j < nBaseFun; ++j) // 遍历基函数
+                    {
+                        for (Idx k = 0; k < nPt; ++k) // 遍历Gauss积分点
+                        {
+                            Vec_i diff(3);
+                            switch (i)
+                            {
+                            case 0:
+                                diff << 0, 0, 0;
+                                break;
+                            case 1:
+                                diff << 1, 0, 0;
+                                break;
+                            case 2:
+                                diff << 0, 1, 0;
+                                break;
+                            case 3:
+                                diff << 0, 0, 1;
+                                break;
+                            }
+                            Gauss.phi[i](j, k) = baseFunRef3D(Gauss.pt.row(k), j, diff, elemtype);
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+#pragma omp simd collapse(3)
             for (Idx i = 0; i < order; ++i)
             {
                 for (Idx j = 0; j < order; ++j)
@@ -575,7 +848,7 @@ namespace myFEM
                     }
                 }
             }
-#pragma omp for collapse(3)
+#pragma omp simd collapse(3)
             for (Idx i = 0; i < 4; ++i) // 导数
             {
                 for (Idx j = 0; j < nBaseFun; ++j) // 遍历基函数
@@ -605,31 +878,55 @@ namespace myFEM
         }
         return Gauss;
     }
-    void affineGauss2AllElems(const refGaussInfo &GaussInfo, mesh &myMesh)
+    void affineGauss2AllElems(const refGaussInfo &GaussInfo, mesh &myMesh, bool ifOMP)
     {
         myMesh.GaussPt.resize(myMesh.nElems);
         // Vec_d a(myMesh.nElems), b(myMesh.nElems), c(myMesh.nElems);
         // Mat_d mid(myMesh.nElems, 3);
         for (int i = 0; i < myMesh.nElems; ++i)
             myMesh.GaussPt[i].resize(GaussInfo.pt.rows(), 3);
-
-#pragma omp parallel for
-        for (int i = 0; i < myMesh.nElems; ++i)
+        if (ifOMP)
         {
-            Idx P1 = myMesh.elems(i, 0);
-            Idx P2 = myMesh.elems(i, 6);
-            double a = (myMesh.nodes(P2, 0) - myMesh.nodes(P1, 0)) * 0.5;
-            double b = (myMesh.nodes(P2, 1) - myMesh.nodes(P1, 1)) * 0.5;
-            double c = (myMesh.nodes(P2, 2) - myMesh.nodes(P1, 2)) * 0.5;
-            Eigen::Vector3d mid;
-            mid << (myMesh.nodes(P2, 0) + myMesh.nodes(P1, 0)) * 0.5,
-                (myMesh.nodes(P2, 1) + myMesh.nodes(P1, 1)) * 0.5,
-                (myMesh.nodes(P2, 2) + myMesh.nodes(P1, 2)) * 0.5;
-            for (int j = 0; j < GaussInfo.pt.rows(); ++j)
+#pragma omp parallel for
+            for (int i = 0; i < myMesh.nElems; ++i)
             {
-                myMesh.GaussPt[i].row(j) << a * GaussInfo.pt(j, 0) + mid(0),
-                    b * GaussInfo.pt(j, 1) + mid(1),
-                    c * GaussInfo.pt(j, 2) + mid(2);
+                Idx P1 = myMesh.elems(i, 0);
+                Idx P2 = myMesh.elems(i, 6);
+                double a = (myMesh.nodes(P2, 0) - myMesh.nodes(P1, 0)) * 0.5;
+                double b = (myMesh.nodes(P2, 1) - myMesh.nodes(P1, 1)) * 0.5;
+                double c = (myMesh.nodes(P2, 2) - myMesh.nodes(P1, 2)) * 0.5;
+                Eigen::Vector3d mid;
+                mid << (myMesh.nodes(P2, 0) + myMesh.nodes(P1, 0)) * 0.5,
+                    (myMesh.nodes(P2, 1) + myMesh.nodes(P1, 1)) * 0.5,
+                    (myMesh.nodes(P2, 2) + myMesh.nodes(P1, 2)) * 0.5;
+                for (int j = 0; j < GaussInfo.pt.rows(); ++j)
+                {
+                    myMesh.GaussPt[i].row(j) << a * GaussInfo.pt(j, 0) + mid(0),
+                        b * GaussInfo.pt(j, 1) + mid(1),
+                        c * GaussInfo.pt(j, 2) + mid(2);
+                }
+            }
+        }
+        else
+        {
+#pragma omp simd
+            for (int i = 0; i < myMesh.nElems; ++i)
+            {
+                Idx P1 = myMesh.elems(i, 0);
+                Idx P2 = myMesh.elems(i, 6);
+                double a = (myMesh.nodes(P2, 0) - myMesh.nodes(P1, 0)) * 0.5;
+                double b = (myMesh.nodes(P2, 1) - myMesh.nodes(P1, 1)) * 0.5;
+                double c = (myMesh.nodes(P2, 2) - myMesh.nodes(P1, 2)) * 0.5;
+                Eigen::Vector3d mid;
+                mid << (myMesh.nodes(P2, 0) + myMesh.nodes(P1, 0)) * 0.5,
+                    (myMesh.nodes(P2, 1) + myMesh.nodes(P1, 1)) * 0.5,
+                    (myMesh.nodes(P2, 2) + myMesh.nodes(P1, 2)) * 0.5;
+                for (int j = 0; j < GaussInfo.pt.rows(); ++j)
+                {
+                    myMesh.GaussPt[i].row(j) << a * GaussInfo.pt(j, 0) + mid(0),
+                        b * GaussInfo.pt(j, 1) + mid(1),
+                        c * GaussInfo.pt(j, 2) + mid(2);
+                }
             }
         }
     }
@@ -700,6 +997,7 @@ namespace myFEM
         }
         else
         {
+#pragma omp simd collapse(2)
             for (Idx idxRow = 0; idxRow < nBaseFun; ++idxRow)
             {
                 for (Idx idxCol = 0; idxCol < nBaseFun; ++idxCol)
@@ -708,6 +1006,7 @@ namespace myFEM
                     refMat(idxRow, idxCol) = temp.dot(Gauss.weight);
                 }
             }
+#pragma omp simd
             for (Idx n = 0; n < myMesh.nElems; ++n)
             {
                 Idx startGlobal = n * nnzLocal;
@@ -893,6 +1192,7 @@ namespace myFEM
         }
         else
         {
+#pragma omp simd collapse(2)
             for (Idx idxRow = 0; idxRow < nBaseFun; ++idxRow)
             {
                 for (Idx idxCol = 0; idxCol < nBaseFun; ++idxCol)
@@ -901,6 +1201,7 @@ namespace myFEM
                     refMat.row(i) = testPtr->row(idxRow).array() * trailPtr->row(idxCol).array();
                 }
             }
+#pragma omp simd
             for (Idx n = 0; n < myMesh.nElems; ++n)
             {
                 Idx startGlobal = n * nnzLocal;
@@ -930,45 +1231,62 @@ namespace myFEM
         K.setFromTriplets(triplets.begin(), triplets.end());
         return K;
     }
-    Vec_t<double> assembleVec(const mesh &myMesh, const refGaussInfo &Gauss)
+    Vec_t<double> assembleVec(const mesh &myMesh, const refGaussInfo &Gauss, bool ifOMP)
     {
         int nBaseFun = myMesh.elems.cols();
-        // 分配任务
-        int size_omp = omp_get_max_threads();
-        int quo = myMesh.nElems / size_omp;
-        int rem = myMesh.nElems % size_omp;
-        std::vector<std::pair<int, int>> task_omp(size_omp);
-        // std::vector<Vec_d> V_local(size_omp);
-        for (int i = 0; i < size_omp; ++i)
-        {
-            // V_local[i] = Vec_d::Zero(myMesh.nPts);
-            int count = rem < 1 ? quo : quo + 1;
-            int start = i == 0 ? 0 : task_omp[i - 1].first + task_omp[i - 1].second;
-            rem--;
-            task_omp[i] = {start, count};
-        }
+
         Vec_d V = Vec_d::Zero(myMesh.nPts);
-#pragma omp parallel
+        if (ifOMP)
         {
-            Vec_d Vlocal = Vec_d::Zero(myMesh.nPts);
-            int rank = omp_get_thread_num();
+            // 分配任务
+            int size_omp = omp_get_max_threads();
+            int quo = myMesh.nElems / size_omp;
+            int rem = myMesh.nElems % size_omp;
+            std::vector<std::pair<int, int>> task_omp(size_omp);
+            // std::vector<Vec_d> V_local(size_omp);
+            for (int i = 0; i < size_omp; ++i)
+            {
+                // V_local[i] = Vec_d::Zero(myMesh.nPts);
+                int count = rem < 1 ? quo : quo + 1;
+                int start = i == 0 ? 0 : task_omp[i - 1].first + task_omp[i - 1].second;
+                rem--;
+                task_omp[i] = {start, count};
+            }
+#pragma omp parallel
+            {
+                Vec_d Vlocal = Vec_d::Zero(myMesh.nPts);
+                int rank = omp_get_thread_num();
+                Vec_d refVec(nBaseFun);
+                for (int i = 0; i < nBaseFun; ++i)
+                    refVec(i) = Gauss.phi[0].row(i).dot(Gauss.weight);
+                for (Idx n = task_omp[rank].first; n < task_omp[rank].first + task_omp[rank].second; ++n)
+                {
+                    for (int i = 0; i < nBaseFun; ++i)
+                        Vlocal(myMesh.elems(n, i)) += refVec(i) * myMesh.Jacobi(n);
+                }
+#pragma omp critical
+                {
+                    V += Vlocal;
+                }
+            }
+        }
+        else
+        {
+            // Vec_d Vlocal = Vec_d::Zero(myMesh.nPts);
             Vec_d refVec(nBaseFun);
             for (int i = 0; i < nBaseFun; ++i)
                 refVec(i) = Gauss.phi[0].row(i).dot(Gauss.weight);
-            for (Idx n = task_omp[rank].first; n < task_omp[rank].first + task_omp[rank].second; ++n)
+            for (Idx n = 0; n < myMesh.nElems; ++n)
             {
                 for (int i = 0; i < nBaseFun; ++i)
-                    Vlocal(myMesh.elems(n, i)) += refVec(i) * myMesh.Jacobi(n);
+                    V(myMesh.elems(n, i)) += refVec(i) * myMesh.Jacobi(n);
             }
-#pragma omp critical
-            {
-                V += Vlocal;
-            }
+            // V += Vlocal;
         }
         return V;
     }
     template <typename Scalar>
-    Vec_t<Scalar> assembleVec(const Fun_t<Scalar> &RHS, const mesh &myMesh, const refGaussInfo &Gauss)
+    Vec_t<Scalar> assembleVec(const Fun_t<Scalar> &RHS, const mesh &myMesh, const refGaussInfo &Gauss, bool ifOMP)
     {
         if (myMesh.GaussPt.size() != myMesh.nElems)
         {
@@ -976,41 +1294,60 @@ namespace myFEM
             std::exit(EXIT_FAILURE);
         }
         int nBaseFun = myMesh.elems.cols();
-        // 分配任务
-        int size_omp = omp_get_max_threads();
-        int quo = myMesh.nElems / size_omp;
-        int rem = myMesh.nElems % size_omp;
-        std::vector<std::pair<int, int>> task_omp(size_omp);
-        // std::vector<Vec_d> V_local(size_omp);
-        for (int i = 0; i < size_omp; ++i)
-        {
-            // V_local[i] = Vec_d::Zero(myMesh.nPts);
-            int count = rem < 1 ? quo : quo + 1;
-            int start = i == 0 ? 0 : task_omp[i - 1].first + task_omp[i - 1].second;
-            rem--;
-            task_omp[i] = {start, count};
-        }
         Vec_t<Scalar> V = Vec_t<Scalar>::Zero(myMesh.nPts);
+        if (ifOMP)
+        { // 分配任务
+            int size_omp = omp_get_max_threads();
+            int quo = myMesh.nElems / size_omp;
+            int rem = myMesh.nElems % size_omp;
+            std::vector<std::pair<int, int>> task_omp(size_omp);
+            // std::vector<Vec_d> V_local(size_omp);
+            for (int i = 0; i < size_omp; ++i)
+            {
+                // V_local[i] = Vec_d::Zero(myMesh.nPts);
+                int count = rem < 1 ? quo : quo + 1;
+                int start = i == 0 ? 0 : task_omp[i - 1].first + task_omp[i - 1].second;
+                rem--;
+                task_omp[i] = {start, count};
+            }
 #pragma omp parallel
+            {
+                Vec_t<Scalar> Vlocal = Vec_t<Scalar>::Zero(myMesh.nPts);
+                int rank = omp_get_thread_num();
+                // Vec_d refVec(nBaseFun);
+                // for (int i = 0; i < nBaseFun; ++i)
+                //     refVec(i) = Gauss.phi[0].row(i).dot(Gauss.weight);
+                Vec_t<Scalar> valFun(Gauss.pt.rows());
+                for (Idx n = task_omp[rank].first; n < task_omp[rank].first + task_omp[rank].second; ++n)
+                {
+                    valFun = RHS(myMesh.GaussPt[n]);
+                    for (int i = 0; i < nBaseFun; ++i)
+                    {
+                        Vec_t<Scalar> temp = valFun.array() * Gauss.phi[0].row(i).reshaped().array();
+                        Vlocal(myMesh.elems(n, i)) += temp.dot(Gauss.weight) * myMesh.Jacobi(n);
+                    }
+                }
+#pragma omp critical
+                {
+                    V += Vlocal;
+                }
+            }
+        }
+        else
         {
-            Vec_t<Scalar> Vlocal = Vec_t<Scalar>::Zero(myMesh.nPts);
             int rank = omp_get_thread_num();
             // Vec_d refVec(nBaseFun);
             // for (int i = 0; i < nBaseFun; ++i)
             //     refVec(i) = Gauss.phi[0].row(i).dot(Gauss.weight);
             Vec_t<Scalar> valFun(Gauss.pt.rows());
-            for (Idx n = task_omp[rank].first; n < task_omp[rank].first + task_omp[rank].second; ++n)
+            for (Idx n = 0; n < myMesh.nElems; ++n)
             {
                 valFun = RHS(myMesh.GaussPt[n]);
                 for (int i = 0; i < nBaseFun; ++i)
                 {
                     Vec_t<Scalar> temp = valFun.array() * Gauss.phi[0].row(i).reshaped().array();
-                    Vlocal(myMesh.elems(n, i)) += temp.dot(Gauss.weight) * myMesh.Jacobi(n);
+                    V(myMesh.elems(n, i)) += temp.dot(Gauss.weight) * myMesh.Jacobi(n);
                 }
-            }
-#pragma omp critical
-            {
-                V += Vlocal;
             }
         }
         return V;
@@ -1281,11 +1618,11 @@ namespace myFEM
     template Vec_t<double>
     assembleVec<double>(const Fun_t<double> &,
                         const mesh &,
-                        const refGaussInfo &);
+                        const refGaussInfo &, bool);
     template Vec_t<Complex>
     assembleVec<Complex>(const Fun_t<Complex> &,
                          const mesh &,
-                         const refGaussInfo &);
+                         const refGaussInfo &, bool);
     template mergeFEMMat_info<double>
     mergeFEMMat<double>(const Mat_d &dofIdx1, const Mat_d &dofIdx2,
                         const SparseMat_t<double> &K1, const SparseMat_t<double> &K2,

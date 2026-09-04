@@ -68,31 +68,31 @@ namespace myFEM
     // 网格剖分
     mesh genMesh3D(Mat_d dom, const Vec_d &xGrid,
                    const Vec_d &yGrid, const Vec_d &zGrid,
-                   meshType type); // 长方体区域网格剖分
+                   meshType type, bool ifOMP = false); // 长方体区域网格剖分
     mesh genFEMMesh3D(Mat_d dom, const Vec_d &xGrid,
                       const Vec_d &yGrid, const Vec_d &zGrid,
-                      elemType type);
+                      elemType type, bool ifOMP = false);
     void addEdgeMidPt(mesh &myMesh, const Vec_d &xGrid,
-                      const Vec_d &yGrid, const Vec_d &zGrid); // 向网格添加边中点
+                      const Vec_d &yGrid, const Vec_d &zGrid, bool ifOMP = false); // 向网格添加边中点
     void addFaceMidPt(mesh &myMesh, const Vec_d &xGrid,
-                      const Vec_d &yGrid, const Vec_d &zGrid); // 向网格添加面中点
+                      const Vec_d &yGrid, const Vec_d &zGrid, bool ifOMP = false); // 向网格添加面中点
     void addBodyMidPt(mesh &myMesh, const Vec_d &xGrid,
-                      const Vec_d &yGrid, const Vec_d &zGrid); // 向网格添加体中点
+                      const Vec_d &yGrid, const Vec_d &zGrid, bool ifOMP = false); // 向网格添加体中点
     // 基函数信息以及仿射变换信息生成
     double baseFunRef3D(Eigen::Vector3d pt, Idx idxFun, Vec_i diff, elemType type);          // 参考单元[-1,1]^3上的有限元基函数
     double baseFun3D(Eigen::Vector3d pt, Idx idxFun, Vec_i diff, elemType type, Mat_d elem); // 任意矩形单元的有限元基函数
-    void genAffineInfo(mesh &myMesh);                                                        // 生成各单元与
+    void genAffineInfo(mesh &myMesh, bool ifOMP = false);                                    // 生成各单元与
     // 生成Gauss点信息
-    refGaussInfo genRefGauss(Idx order, meshType meshtype, elemType elemtype); // 生成参考单元上的Gauss点信息
-    void affineGauss2AllElems(const refGaussInfo &GaussInfo, mesh &myMesh);
+    refGaussInfo genRefGauss(Idx order, meshType meshtype, elemType elemtype, bool ifOMP = false); // 生成参考单元上的Gauss点信息
+    void affineGauss2AllElems(const refGaussInfo &GaussInfo, mesh &myMesh, bool ifOMP = false);
     // 组装刚度矩阵
-    SparseMat_t<double> assembleMat(const mesh &myMesh, const refGaussInfo &Gauss, Eigen::Vector3i DfTest, Eigen::Vector3i DfTrail, bool enable_omp = true); // 常系数用这个
+    SparseMat_t<double> assembleMat(const mesh &myMesh, const refGaussInfo &Gauss, Eigen::Vector3i DfTest, Eigen::Vector3i DfTrail, bool enable_omp = false); // 常系数用这个
     template <typename Scalar>
-    SparseMat_t<Scalar> assembleMat(const Fun_t<Scalar> &coef, const mesh &myMesh, const refGaussInfo &Gauss, Eigen::Vector3i DfTest, Eigen::Vector3i DfTrail, bool enable_omp = true); // 变系数用这个
+    SparseMat_t<Scalar> assembleMat(const Fun_t<Scalar> &coef, const mesh &myMesh, const refGaussInfo &Gauss, Eigen::Vector3i DfTest, Eigen::Vector3i DfTrail, bool enable_omp = false); // 变系数用这个
     // 组装载荷向量
-    Vec_t<double> assembleVec(const mesh &myMesh, const refGaussInfo &Gauss); // 常数右端项用这个
+    Vec_t<double> assembleVec(const mesh &myMesh, const refGaussInfo &Gauss, bool ifOMP = false); // 常数右端项用这个
     template <typename Scalar>
-    Vec_t<Scalar> assembleVec(const Fun_t<Scalar> &RHS, const mesh &myMesh, const refGaussInfo &Gauss);
+    Vec_t<Scalar> assembleVec(const Fun_t<Scalar> &RHS, const mesh &myMesh, const refGaussInfo &Gauss, bool ifOMP = false);
     // 区域拼接
     bool almostEqual(double x, double y, double eps = EPS);
     Vec_d getPointNd(const Mat_d &X, Idx row);
