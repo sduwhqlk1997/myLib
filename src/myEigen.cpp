@@ -3,12 +3,11 @@
 namespace myEigen
 {
     template <typename Scalar>
-    SparseMat_t<Scalar> blkdiag(const std::vector<SparseMat_t<Scalar>> &matBloks)
+    SparseMat_t<Scalar> blkdiag(const std::vector<SparseMat_t<Scalar>> &matBloks, bool ifOMP)
     {
         if (matBloks.empty())
             return SparseMat_t<Scalar>();
-        int sizeOmp = omp_get_max_threads();
-        std::vector<std::pair<int, int>> omp_task = myOMP::distributeTasks(sizeOmp, matBloks.size());
+
         std::vector<Idx> posStartRow(matBloks.size(), 0), nnzStart(matBloks.size(), 0),
             posStartCol(matBloks.size(), 0);
         Idx nnz = matBloks[0].nonZeros();
@@ -25,10 +24,34 @@ namespace myEigen
         }
         std::vector<Eigen::Triplet<Scalar, Idx>> triplets(nnz);
         // triplets.reserve(nnz);
-#pragma omp parallel
+        if (ifOMP) // 并行执行
         {
-            Idx rankOmp = omp_get_thread_num();
-            for (Idx i = omp_task[rankOmp].first; i < omp_task[rankOmp].first + omp_task[rankOmp].second; ++i)
+            int sizeOmp = omp_get_max_threads();
+            std::vector<std::pair<int, int>> omp_task = myOMP::distributeTasks(sizeOmp, matBloks.size());
+#pragma omp parallel
+            {
+                Idx rankOmp = omp_get_thread_num();
+                for (Idx i = omp_task[rankOmp].first; i < omp_task[rankOmp].first + omp_task[rankOmp].second; ++i)
+                {
+                    Idx idxTemp = 0;
+                    for (Idx col = 0; col < matBloks[i].outerSize(); ++col)
+                    {
+                        // 内层迭代器：遍历当前列所有非零元
+                        for (typename SparseMat_t<Scalar>::InnerIterator iter(matBloks[i], col); iter; ++iter)
+                        {
+                            triplets[nnzStart[i] + idxTemp] =
+                                Eigen::Triplet<Scalar, Idx>{iter.row() + posStartRow[i],
+                                                            iter.col() + posStartCol[i], iter.value()};
+                            idxTemp++;
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+#pragma omp simd
+            for (Idx i = 0; i < matBloks.size(); ++i)
             {
                 Idx idxTemp = 0;
                 for (Idx col = 0; col < matBloks[i].outerSize(); ++col)
@@ -52,15 +75,15 @@ namespace myEigen
     }
 
     template <typename Scalar>
-    SparseMat_t<Scalar> blkMat(const std::vector<std::vector<SparseMat_t<Scalar>>> &matBloks)
+    SparseMat_t<Scalar> blkMat(const std::vector<std::vector<SparseMat_t<Scalar>>> &matBloks, bool ifOMP)
     {
         if (matBloks.empty())
             return SparseMat_t<Scalar>();
-        int sizeOmp = omp_get_max_threads();
+
         int nrowBlk = matBloks.size();
         int ncolBlk = matBloks[0].size();
         int ntotalBlk = nrowBlk * ncolBlk;
-        std::vector<std::pair<int, int>> omp_task = myOMP::distributeTasks(sizeOmp, ntotalBlk);
+
         auto I = [nrowBlk](int i, int j) -> int
         {
             return i + j * nrowBlk;
@@ -98,10 +121,36 @@ namespace myEigen
             }
         }
         std::vector<Eigen::Triplet<Scalar, Idx>> triplets(nnz);
-#pragma omp parallel num_threads(sizeOmp)
+        if (ifOMP)
         {
-            Idx rankOmp = omp_get_thread_num();
-            for (Idx i = omp_task[rankOmp].first; i < omp_task[rankOmp].first + omp_task[rankOmp].second; ++i)
+            int sizeOmp = omp_get_max_threads();
+            std::vector<std::pair<int, int>> omp_task = myOMP::distributeTasks(sizeOmp, ntotalBlk);
+#pragma omp parallel num_threads(sizeOmp)
+            {
+                Idx rankOmp = omp_get_thread_num();
+                for (Idx i = omp_task[rankOmp].first; i < omp_task[rankOmp].first + omp_task[rankOmp].second; ++i)
+                {
+                    Idx idxTemp = 0;
+                    int blk_i = i % nrowBlk;
+                    int blk_j = i / nrowBlk;
+                    for (Idx col = 0; col < matBloks[blk_i][blk_j].outerSize(); ++col)
+                    {
+                        // 内层迭代器：遍历当前列所有非零元
+                        for (typename SparseMat_t<Scalar>::InnerIterator iter(matBloks[blk_i][blk_j], col); iter; ++iter)
+                        {
+                            triplets[nnzStart[i] + idxTemp] =
+                                Eigen::Triplet<Scalar, Idx>{iter.row() + posStartRow[i],
+                                                            iter.col() + posStartCol[i], iter.value()};
+                            idxTemp++;
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+#pragma omp simd
+            for (Idx i = 0; i < ntotalBlk; ++i)
             {
                 Idx idxTemp = 0;
                 int blk_i = i % nrowBlk;
@@ -281,10 +330,10 @@ namespace myEigen
         result.setFromTriplets(triplets.begin(), triplets.end());
         return result;
     }
-    template SparseMat_t<Complex> blkdiag(const std::vector<SparseMat_t<Complex>> &matBloks);
-    template SparseMat_t<double> blkdiag(const std::vector<SparseMat_t<double>> &matBloks);
-    template SparseMat_t<Complex> blkMat(const std::vector<std::vector<SparseMat_t<Complex>>> &matBloks);
-    template SparseMat_t<double> blkMat(const std::vector<std::vector<SparseMat_t<double>>> &matBloks);
+    template SparseMat_t<Complex> blkdiag(const std::vector<SparseMat_t<Complex>> &matBloks, bool ifOMP);
+    template SparseMat_t<double> blkdiag(const std::vector<SparseMat_t<double>> &matBloks, bool ifOMP);
+    template SparseMat_t<Complex> blkMat(const std::vector<std::vector<SparseMat_t<Complex>>> &matBloks, bool ifOMP);
+    template SparseMat_t<double> blkMat(const std::vector<std::vector<SparseMat_t<double>>> &matBloks, bool ifOMP);
     // template void addSpMatColOrRow(SparseMat_t<double> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);
     // template void addSpMatColOrRow(SparseMat_t<Complex> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);
     template SparseMat_t<double> spMatAddColOrRow(SparseMat_t<double> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);

@@ -16,9 +16,9 @@ namespace myEigen // 基于Eigen开发的一些常用矩阵操作
     using Vec_t = Eigen::Vector<Scalar, Eigen::Dynamic>;
     // 矩阵块拼接操作
     template <typename Scalar>
-    SparseMat_t<Scalar> blkdiag(const std::vector<SparseMat_t<Scalar>> &matBloks);
+    SparseMat_t<Scalar> blkdiag(const std::vector<SparseMat_t<Scalar>> &matBloks, bool ifOMP = false);
     template <typename Scalar>
-    SparseMat_t<Scalar> blkMat(const std::vector<std::vector<SparseMat_t<Scalar>>> &matBloks);
+    SparseMat_t<Scalar> blkMat(const std::vector<std::vector<SparseMat_t<Scalar>>> &matBloks, bool ifOMP = false);
     template <typename Scalar>
     SparseMat_t<Scalar>
     delSpMatRowOrCol(const SparseMat_t<Scalar> &K, const std::set<Eigen::Index> &idxDel, Eigen::Index flag);
