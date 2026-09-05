@@ -1467,13 +1467,13 @@ namespace SAW2_5D
         //     wrMatFile::saveEigenDenseMat2Mat(c_name1, subProbs[i].dofIdx);
         //     wrMatFile::saveEigenSparseMat2Mat(c_name2, subProbs[i].K);
         // }
-        for (auto p = subProbTypes.begin(); p != subProbTypes.end(); ++p)
-        {
-            std::cout << "第" << p->second << "个子区域的组成为: ";
-            for (Idx i = 0; i < p->first.size(); ++i)
-                std::cout << p->first[i] << "\t";
-            std::cout << "\n";
-        }
+        // for (auto p = subProbTypes.begin(); p != subProbTypes.end(); ++p)
+        // {
+        //     std::cout << "第" << p->second << "个子区域的组成为: ";
+        //     for (Idx i = 0; i < p->first.size(); ++i)
+        //         std::cout << p->first[i] << "\t";
+        //     std::cout << "\n";
+        // }
     }
     void deviceArray::formGlobalSystem()
     {
@@ -1699,7 +1699,7 @@ namespace SAW2_5D
         Idx NxIDT{static_cast<Idx>(ceil(2 * elemPtsPerWaveLen * xIDT / waveLen))},
             NxRef{static_cast<Idx>(ceil(2 * elemPtsPerWaveLen * xRef / waveLen))},
             NxBar{static_cast<Idx>(ceil(2 * elemPtsPerWaveLen * xBar / waveLen))};
-        std::cout << "NxBar=" << NxBar << ", NyBar=" << NyDev << ", NzBar=" << NzDev << "\n";
+        // std::cout << "NxBar=" << NxBar << ", NyBar=" << NyDev << ", NzBar=" << NzDev << "\n";
         // PML深度方向网格点数
         Idx NxPML{static_cast<Idx>(ceil(elemPtsPerWaveLen * dx / waveLen))},
             NzPML{static_cast<Idx>(ceil(elemPtsPerWaveLen * dz / waveLen))};
@@ -1727,7 +1727,7 @@ namespace SAW2_5D
         /*无量纲化*/
         if (ifNd)
         {
-            std::cout << "开始无量纲化...\n";
+            // std::cout << "开始无量纲化...\n";
             this->genDimScales(U0);
             this->dimensionless();
             dx /= dimScales.L0;
