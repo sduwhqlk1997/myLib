@@ -174,17 +174,3 @@ device.formGlobalSystem();
 // device.recoverDimSolution();
 ```
 
-## 我已完成的操作
-
-我已根据仓库中 `include/SAW.hpp` 的接口声明，生成以上 Markdown 文档。
-
-## 提交说明
-
-- 已将文档保存为 `docs/SAW.md` 并提交到仓库（commit message: "Add SAW.hpp API documentation (docs/SAW.md)"）。
-
-如果你希望：
-- 修改文件路径（例如放到 `include/` 下或改名为 `README_SAW.md`）；
-- 使用英文文档或 Doxygen 注释风格并直接插入到 `include/SAW.hpp` 中；
-- 同时生成示例代码（可编译）；
-
-请告诉我，我可以继续修改或提交新的变更。
