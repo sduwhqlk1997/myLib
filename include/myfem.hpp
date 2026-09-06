@@ -39,8 +39,24 @@ namespace myFEM
         Q1, // 1次矩形lagrange元
         Q2  // 2次矩形lagrange元
     };
+    enum FacePos
+    {
+        left = 0,   // 左边界面
+        right = 3,  // 右边界面
+        behind = 1, // 后边界面
+        front = 4,  // 前边界面
+        bottom = 2, // 下边界面
+        top = 5     // 上边界面
+
+    };
+    struct BDFace
+    {
+        std::unordered_map<FacePos, Mat_i> face;      // 各个边界面上的单元面
+        std::unordered_map<FacePos, Vec_i> face2elem; // 单元面属于的单元，与face对应
+    };
     struct mesh
     {
+        // 单元信息
         Idx nElems;
         Idx nPts;
         meshType meshtype;
@@ -53,6 +69,8 @@ namespace myFEM
         Vec_d Jacobi;               // 每个单元的Jacobi行列式
         Mat_d Jacobi_inv;           // Jacobi矩阵的逆
         std::vector<Mat_d> GaussPt; // 各个单元上的Gauss积分点，每行一个点
+        // 边界信息
+        BDFace bdFace;
     };
     struct refGaussInfo // 参考单元Gauss点信息
     {
@@ -78,6 +96,7 @@ namespace myFEM
                       const Vec_d &yGrid, const Vec_d &zGrid, bool ifOMP = false); // 向网格添加面中点
     void addBodyMidPt(mesh &myMesh, const Vec_d &xGrid,
                       const Vec_d &yGrid, const Vec_d &zGrid, bool ifOMP = false); // 向网格添加体中点
+    void genBdFace(mesh &myMesh);                                                  // 生成边界面(TODO)
     // 基函数信息以及仿射变换信息生成
     double baseFunRef3D(Eigen::Vector3d pt, Idx idxFun, Vec_i diff, elemType type);          // 参考单元[-1,1]^3上的有限元基函数
     double baseFun3D(Eigen::Vector3d pt, Idx idxFun, Vec_i diff, elemType type, Mat_d elem); // 任意矩形单元的有限元基函数
