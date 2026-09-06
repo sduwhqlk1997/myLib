@@ -51,8 +51,8 @@ namespace myFEM
     };
     struct BDFace
     {
-        std::unordered_map<FacePos, Mat_i> face;      // 各个边界面上的单元面
-        std::unordered_map<FacePos, Vec_i> face2elem; // 单元面属于的单元，与face对应
+        std::vector<Mat_i> face;      // 各个边界面上的单元面,0:左、1：后、2：下；3：右、4前、5：上
+        std::vector<Vec_i> face2elem; // 单元面属于的单元，与face对应
     };
     struct mesh
     {
@@ -96,7 +96,7 @@ namespace myFEM
                       const Vec_d &yGrid, const Vec_d &zGrid, bool ifOMP = false); // 向网格添加面中点
     void addBodyMidPt(mesh &myMesh, const Vec_d &xGrid,
                       const Vec_d &yGrid, const Vec_d &zGrid, bool ifOMP = false); // 向网格添加体中点
-    void genBdFace(mesh &myMesh);                                                  // 生成边界面(TODO)
+    void genBdFace(mesh &myMesh, bool ifOMP = false);                              // 生成边界面(TODO)
     // 基函数信息以及仿射变换信息生成
     double baseFunRef3D(Eigen::Vector3d pt, Idx idxFun, Vec_i diff, elemType type);          // 参考单元[-1,1]^3上的有限元基函数
     double baseFun3D(Eigen::Vector3d pt, Idx idxFun, Vec_i diff, elemType type, Mat_d elem); // 任意矩形单元的有限元基函数

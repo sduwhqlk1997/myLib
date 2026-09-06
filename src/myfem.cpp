@@ -581,6 +581,16 @@ namespace myFEM
         nodeTemp << myMesh.nodes, nodes;
         myMesh.nodes = std::move(nodeTemp);
     }
+    void genBdFace(mesh &myMesh, bool ifOMP)
+    {
+        // TODO
+        myMesh.bdFace.face2elem.reserve(6);
+        myMesh.bdFace.face.reserve(6);
+#pragma omp parallel for
+        for (Idx i = 0; i < 6; ++i)
+        {
+        }
+    }
     double baseFunRef3D(Eigen::Vector3d pt, Idx idxFun, Vec_i diff, elemType type)
     { // pt:要计算的点，idxFun:基函数编号，diff：导数阶，type：有限元类型
         Mat_i cube;
