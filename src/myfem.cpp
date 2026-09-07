@@ -100,7 +100,6 @@ namespace myFEM
                       elemType type, bool ifOMP)
     {
         mesh myMesh;
-        myMesh.elemtype = type;
         switch (type)
         {
         case Q1:
@@ -116,6 +115,7 @@ namespace myFEM
             break;
         }
         }
+        myMesh.elemtype = type;
         return myMesh;
     }
     void addEdgeMidPt(mesh &myMesh, const Vec_d &xGrid,
@@ -581,14 +581,113 @@ namespace myFEM
         nodeTemp << myMesh.nodes, nodes;
         myMesh.nodes = std::move(nodeTemp);
     }
-    void genBdFace(mesh &myMesh, bool ifOMP)
+    void genBdFace(mesh &myMesh)
     {
-        // TODO
-        myMesh.bdFace.face2elem.reserve(6);
-        myMesh.bdFace.face.reserve(6);
-#pragma omp parallel for
-        for (Idx i = 0; i < 6; ++i)
+        if (myMesh.elemtype != Q2)
         {
+            std::cout << myMesh.elemtype << "\n";
+            std::cout << "genBdFace：目前该函数仅适用于Q2有限元！\n";
+            std::exit(EXIT_FAILURE);
+        }
+        myMesh.bdFace.face2elem.resize(6);
+        myMesh.bdFace.face.resize(6);
+        Idx nx = myMesh.nXnYnZ(0) - 1;
+        Idx ny = myMesh.nXnYnZ(1) - 1;
+        Idx nz = myMesh.nXnYnZ(2) - 1;
+        for (int i = 0; i < 3; ++i)
+        {
+            int nFace{0};
+            if (i == 0)
+                nFace = nx * nz;
+            else if (i == 1)
+                nFace = ny * nz;
+            else if (i == 2)
+                nFace = nx * ny;
+            myMesh.bdFace.face2elem[i].resize(nFace);
+            myMesh.bdFace.face[i].resize(nFace, 9);
+            myMesh.bdFace.face2elem[i + 3].resize(nFace);
+            myMesh.bdFace.face[i + 3].resize(nFace, 9);
+        }
+        for (Idx pFace = 0; pFace < 3; ++pFace)
+        {
+            if (pFace == 0)
+            {
+#pragma omp simd collapse(2)
+                for (Idx i = 0; i < nx; ++i)
+                {
+                    for (Idx k = 0; k < nz; ++k)
+                    {
+                        Idx iElemL = i + nx * ny * k;
+                        Idx iElemR = i + nx * (ny - 1) + (nx * ny) * k;
+                        Idx iFace = i + k * nx;
+                        myMesh.bdFace.face2elem[pFace](iFace) = iElemL;
+                        myMesh.bdFace.face2elem[pFace + 3](iFace) = iElemR;
+
+                        myMesh.bdFace.face[pFace].row(iFace)
+                            << myMesh.elems(iElemL, 0),
+                            myMesh.elems(iElemL, 1), myMesh.elems(iElemL, 5), myMesh.elems(iElemL, 4),
+                            myMesh.elems(iElemL, 8), myMesh.elems(iElemL, 17), myMesh.elems(iElemL, 10),
+                            myMesh.elems(iElemL, 16), myMesh.elems(iElemL, 20);
+                        myMesh.bdFace.face[pFace + 3].row(iFace)
+                            << myMesh.elems(iElemR, 3),
+                            myMesh.elems(iElemR, 7), myMesh.elems(iElemR, 6), myMesh.elems(iElemR, 2),
+                            myMesh.elems(iElemR, 9), myMesh.elems(iElemR, 18), myMesh.elems(iElemR, 11),
+                            myMesh.elems(iElemR, 19), myMesh.elems(iElemR, 21);
+                    }
+                }
+            }
+            else if (pFace == 1)
+            {
+#pragma omp simd collapse(2)
+                for (Idx j = 0; j < ny; ++j)
+                {
+                    for (Idx k = 0; k < nz; ++k)
+                    {
+                        Idx iElemB = nx * j + nx * ny * k;
+                        Idx iElemF = nx - 1 + nx * j + nx * ny * k;
+                        Idx iFace = j + k * ny;
+                        myMesh.bdFace.face2elem[pFace](iFace) = iElemB;
+                        myMesh.bdFace.face2elem[pFace + 3](iFace) = iElemF;
+
+                        myMesh.bdFace.face[pFace].row(iFace)
+                            << myMesh.elems(iElemB, 0),
+                            myMesh.elems(iElemB, 4), myMesh.elems(iElemB, 7), myMesh.elems(iElemB, 3),
+                            myMesh.elems(iElemB, 16), myMesh.elems(iElemB, 14), myMesh.elems(iElemB, 18),
+                            myMesh.elems(iElemB, 12), myMesh.elems(iElemB, 22);
+                        myMesh.bdFace.face[pFace + 3].row(iFace)
+                            << myMesh.elems(iElemF, 1),
+                            myMesh.elems(iElemF, 2), myMesh.elems(iElemF, 6), myMesh.elems(iElemF, 5),
+                            myMesh.elems(iElemF, 13), myMesh.elems(iElemF, 19), myMesh.elems(iElemF, 15),
+                            myMesh.elems(iElemF, 17), myMesh.elems(iElemF, 23);
+                    }
+                }
+            }
+            else if (pFace == 2)
+            {
+#pragma omp simd collapse(2)
+                for (Idx i = 0; i < nx; ++i)
+                {
+                    for (Idx j = 0; j < ny; ++j)
+                    {
+                        Idx iElemB = i + nx * j;
+                        Idx iElemT = i + nx * j + nx * ny * (nz - 1);
+                        Idx iFace = i + j * nx;
+                        myMesh.bdFace.face2elem[pFace](iFace) = iElemB;
+                        myMesh.bdFace.face2elem[pFace + 3](iFace) = iElemT;
+
+                        myMesh.bdFace.face[pFace].row(iFace)
+                            << myMesh.elems(iElemB, 0),
+                            myMesh.elems(iElemB, 3), myMesh.elems(iElemB, 2), myMesh.elems(iElemB, 1),
+                            myMesh.elems(iElemB, 8), myMesh.elems(iElemB, 12), myMesh.elems(iElemB, 9),
+                            myMesh.elems(iElemB, 13), myMesh.elems(iElemB, 24);
+                        myMesh.bdFace.face[pFace + 3].row(iFace)
+                            << myMesh.elems(iElemT, 4),
+                            myMesh.elems(iElemT, 5), myMesh.elems(iElemT, 6), myMesh.elems(iElemT, 7),
+                            myMesh.elems(iElemT, 10), myMesh.elems(iElemT, 15), myMesh.elems(iElemT, 11),
+                            myMesh.elems(iElemT, 14), myMesh.elems(iElemT, 25);
+                    }
+                }
+            }
         }
     }
     double baseFunRef3D(Eigen::Vector3d pt, Idx idxFun, Vec_i diff, elemType type)
