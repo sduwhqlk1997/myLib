@@ -240,7 +240,7 @@ namespace SAW2_5D
         };
         struct SubProb // 区域分解子问题
         {
-            Idx tag;
+            Idx tag; // 子问题编号
             Mat_d dom_p, dom_e;
             Mat_t<double> dofIdx;
             SparseMat_t<Complex> K;
@@ -265,13 +265,13 @@ namespace SAW2_5D
             double k0 = 1.0;     // 波数尺度
         };
         /* 子结构数据*/
-        Eigen::Vector3d ori = Eigen::Vector3d(0, 0, 0);
-        std::vector<baseStructure> subStructures; // 器件子结构，索引号表示子结构类型编号
-        std::vector<SubProb> subProbs;            // 子问题（用于区域分解），索引号表示子问题类型编号
-        int numSubStructures = 0;                 // 子结构种类数
+        Eigen::Vector3d ori = Eigen::Vector3d(0, 0, 0); // 器件的原点
+        std::vector<baseStructure> subStructures;       // 器件子结构，索引号表示子结构类型编号
+        std::vector<SubProb> subProbs;                  // 子问题（用于区域分解），索引号表示子问题类型编号
+        int numSubStructures = 0;                       // 子结构种类数
 
     public:
-        Mat_i baseStructureArray; // 器件子结构序列
+        Mat_i baseStructureArray; // 器件子结构序列，其中的数字表示子结构类型，当未调用区域分解函数时，数字与subStructures变量的索引对应；当调用过区域分解函数时，则数字对应于subProbs的索引
         Eigen::Matrix<geoDom, Eigen::Dynamic,
                       Eigen::Dynamic>
             geoArray;        // 子结构的实际几何阵列
