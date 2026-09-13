@@ -591,6 +591,7 @@ namespace myFEM
         }
         myMesh.bdFace.face2elem.resize(6);
         myMesh.bdFace.face.resize(6);
+        myMesh.bdFace.loIdx.resize(6);
         Idx nx = myMesh.nXnYnZ(0) - 1;
         Idx ny = myMesh.nXnYnZ(1) - 1;
         Idx nz = myMesh.nXnYnZ(2) - 1;
@@ -605,9 +606,17 @@ namespace myFEM
                 nFace = nx * ny;
             myMesh.bdFace.face2elem[i].resize(nFace);
             myMesh.bdFace.face[i].resize(nFace, 9);
+            myMesh.bdFace.loIdx[i].resize(9);
             myMesh.bdFace.face2elem[i + 3].resize(nFace);
             myMesh.bdFace.face[i + 3].resize(nFace, 9);
+            myMesh.bdFace.loIdx[i + 3].resize(9);
         }
+        myMesh.bdFace.loIdx[0] << 0, 1, 5, 4, 8, 17, 10, 16, 20;
+        myMesh.bdFace.loIdx[3] << 3, 7, 6, 2, 9, 18, 11, 19, 21;
+        myMesh.bdFace.loIdx[1] << 0, 4, 7, 3, 16, 14, 18, 12, 22;
+        myMesh.bdFace.loIdx[4] << 1, 2, 6, 5, 13, 19, 15, 17, 23;
+        myMesh.bdFace.loIdx[2] << 0, 3, 2, 1, 8, 12, 9, 13, 24;
+        myMesh.bdFace.loIdx[5] << 4, 5, 6, 7, 10, 15, 11, 14, 25;
         for (Idx pFace = 0; pFace < 3; ++pFace)
         {
             if (pFace == 0)

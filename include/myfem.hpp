@@ -47,11 +47,11 @@ namespace myFEM
         front = 4,  // 前边界面
         bottom = 2, // 下边界面
         top = 5     // 上边界面
-
     };
     struct BDFace
     {
         std::vector<Mat_i> face;      // 各个边界面上的单元面,0:左、1：后、2：下；3：右、4前、5：上
+        std::vector<Vec_i> loIdx;     // 各个边界面上的单元面的局部索引，即每个元素对应所属单元的节点局部编号,0:左、1：后、2：下；3：右、4前、5：上
         std::vector<Vec_i> face2elem; // 单元面属于的单元，与face对应
     };
     struct mesh
