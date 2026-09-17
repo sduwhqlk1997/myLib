@@ -1712,7 +1712,6 @@ namespace SAW2_5D
         subStructures[0] = baseStructure(IDT, dom_p_IDT, dom_e_IDT, materialSub, materialEle, omega);
         subStructures[1] = baseStructure(IDT, dom_p_IDT, dom_e_IDT, materialSub, materialEle, omega);
         subStructures[1].setTerminalVoltage(V0);
-        // TO DO
         if (nRef > 0) // Ref
         {
             Mat_d dom_p_Ref{{0, xRef}, {0, yDev}, {0, zDev}},

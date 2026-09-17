@@ -249,6 +249,12 @@ namespace SAW2_5D
             Vec_i dof2Nodes;
             mesh meshFEM;
         };
+        /* 子结构数据*/
+        Eigen::Vector3d ori = Eigen::Vector3d(0, 0, 0); // 器件的原点
+        std::vector<baseStructure> subStructures;       // 器件子结构，索引号表示子结构类型编号
+        int numSubStructures = 0;                       // 子结构种类数
+
+    public:
         struct DimScales // 无量纲化特征量
         {
             double L0 = 1.0;     // 特征长度
@@ -264,14 +270,8 @@ namespace SAW2_5D
             double v0 = 1.0;     // 波速尺度
             double k0 = 1.0;     // 波数尺度
         };
-        /* 子结构数据*/
-        Eigen::Vector3d ori = Eigen::Vector3d(0, 0, 0); // 器件的原点
-        std::vector<baseStructure> subStructures;       // 器件子结构，索引号表示子结构类型编号
-        std::vector<SubProb> subProbs;                  // 子问题（用于区域分解），索引号表示子问题类型编号
-        int numSubStructures = 0;                       // 子结构种类数
-
-    public:
-        Mat_i baseStructureArray; // 器件子结构序列，其中的数字表示子结构类型，当未调用区域分解函数时，数字与subStructures变量的索引对应；当调用过区域分解函数时，则数字对应于subProbs的索引
+        std::vector<SubProb> subProbs; // 子问题（用于区域分解），索引号表示子问题类型编号
+        Mat_i baseStructureArray;      // 器件子结构序列，其中的数字表示子结构类型，当未调用区域分解函数时，数字与subStructures变量的索引对应；当调用过区域分解函数时，则数字对应于subProbs的索引
         Eigen::Matrix<geoDom, Eigen::Dynamic,
                       Eigen::Dynamic>
             geoArray;        // 子结构的实际几何阵列
