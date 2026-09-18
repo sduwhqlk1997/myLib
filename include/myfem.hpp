@@ -117,10 +117,25 @@ namespace myFEM
     Vec_d getPointNd(const Mat_d &X, Idx row);
     struct PointNdHash
     {
+        double eps;
+
+        explicit PointNdHash(double eps = EPS)
+            : eps(eps)
+        {
+        }
+
         std::size_t operator()(const Vec_d &p) const;
     };
+
     struct PointNdEqual
     {
+        double eps;
+
+        explicit PointNdEqual(double eps = EPS)
+            : eps(eps)
+        {
+        }
+
         bool operator()(const Vec_d &a, const Vec_d &b) const;
     };
     std::pair<std::vector<Idx>, std::vector<Idx>>

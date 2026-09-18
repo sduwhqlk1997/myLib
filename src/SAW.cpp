@@ -10,9 +10,13 @@ namespace SAW2_5D
                       double scale)
     {
         // 返回两组点在各自的一个平行与同一坐标平面上的对应点的索引
-        std::unordered_map<Vec_d, Idx, PointNdHash, PointNdEqual> mapB;
-        mapB.reserve(static_cast<std::size_t>(dofIdx2.rows()));
         double eps = EPS * scale;
+        std::unordered_map<Vec_d, Idx, PointNdHash, PointNdEqual> mapB(
+            0,
+            PointNdHash(eps),
+            PointNdEqual(eps));
+        mapB.reserve(static_cast<std::size_t>(dofIdx2.rows()));
+        // double eps = EPS * scale;
         for (Idx j = 0; j < dofIdx2.rows(); ++j)
         {
             if (almostEqual(dofIdx2(j, interFaceDim), interFacePt2, eps))
@@ -802,7 +806,10 @@ namespace SAW2_5D
         // yBehind : 后面的y坐标，yFront：前面的y坐标
         // 提取前后面自由度
         double eps = EPS * (yFront - yBehind);
-        std::unordered_map<Vec_d, Idx, PointNdHash, PointNdEqual> mapB;
+        std::unordered_map<Vec_d, Idx, PointNdHash, PointNdEqual> mapB(
+            0,
+            PointNdHash(eps),
+            PointNdEqual(eps));
         mapB.reserve(dofIdx.rows()); // 存储所有后面自由度
         for (Idx j = 0; j < dofIdx.rows(); ++j)
         {

@@ -1485,11 +1485,15 @@ namespace myFEM
 
         for (Idx i = 0; i < p.size(); ++i)
         {
-            std::size_t hx = std::hash<double>{}(p(i));
+            // 按 eps 将坐标离散化
+            long long q = std::llround(p(i) / eps);
+
+            std::size_t hx = std::hash<long long>{}(q);
 
             // hash combine
             h ^= hx + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
         }
+
         return h;
     }
     bool PointNdEqual::operator()(const Vec_d &a, const Vec_d &b) const
@@ -1501,7 +1505,7 @@ namespace myFEM
         }
         for (int k = 0; k < a.size(); ++k)
         {
-            if (!almostEqual(a[k], b[k]))
+            if (!almostEqual(a[k], b[k], eps))
             {
                 return false;
             }
@@ -1523,9 +1527,10 @@ namespace myFEM
             searchEnd1 = dofIdx1.rows();
         if (searchEnd2 == -1)
             searchEnd2 = dofIdx2.rows();
-        std::unordered_map<Vec_d, Idx, PointNdHash, PointNdEqual> mapB;
-        mapB.reserve(static_cast<std::size_t>(dofIdx2.rows()));
         double eps = EPS * scale;
+        std::unordered_map<Vec_d, Idx, PointNdHash, PointNdEqual> mapB(0, PointNdHash(eps), PointNdEqual(eps));
+        mapB.reserve(static_cast<std::size_t>(dofIdx2.rows()));
+
         for (Idx j = searchStart2; j < searchEnd2; ++j)
         {
             if (almostEqual(dofIdx2(j, interFace.first), interFace.second, eps))
