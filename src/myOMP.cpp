@@ -1,4 +1,5 @@
 #include <myOMP.hpp>
+#include <mkl.h>
 namespace myOMP
 {
     std::vector<std::pair<int, int>> distributeTasks(int numThreads, int totalTasks)
@@ -16,4 +17,15 @@ namespace myOMP
         }
         return task_omp;
     }
+    void initOmpMklNestedParallel()
+    {
+        omp_set_dynamic(0);
+
+        // 允许 nested OpenMP
+        omp_set_max_active_levels(2);
+
+        // 禁止 MKL 动态缩小线程数
+        mkl_set_dynamic(0);
+    }
+
 }
