@@ -89,6 +89,14 @@ namespace SAW2_5D
     void treatFloatPotentialCond(double zIntFace, double xIntFaceL, double xIntFaceR, // 交界面z坐标以及左右x坐标
                                  Mat_d &dofIdx, SparseMat_t<Complex> &K, Vec_i &dof2Nodes);
     void treatPMLDirBoundCond(Mat_d dom, Mat_d &dofIdx, SparseMat_t<Complex> &K, Vec_i &dof2Nodes, pmlPosition pos, double scale);
+    /*计算压电波动方程的体波和表面波解*/
+    struct BAWSol
+    {
+        Vec_t<double> n;       // 波矢方向单位向量
+        Mat_t<Complex> eigVec; // Christoffel 方程解的特征向量（极化方向）
+        Vec_t<Complex> eigVal; // Christoffel 方程解的特征值（波速）
+    };
+    BAWSol solveBAW(material para, Vec_t<double> n); // 求解体波的特征值问题
     /*子结构定义*/
     enum typeBaseStructure
     {

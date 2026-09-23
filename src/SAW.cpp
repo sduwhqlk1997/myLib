@@ -1,4 +1,5 @@
 #include <SAW.hpp>
+#include <Eigen/Eigenvalues>
 #include <myEigen.hpp>
 #include <myOMP.hpp>
 #include <mat2eigen.hpp>
@@ -1117,6 +1118,62 @@ namespace SAW2_5D
         K.setFromTriplets(triplets.begin(), triplets.end());
         dofIdx = myEigen::removeRowsDenseMat<double>(dofIdx, idxDel);
         dof2Nodes = myEigen::removeRowsDenseMat<Idx>(dof2Nodes, idxDel);
+    }
+    BAWSol solveBAW(material para, Vec_t<double> n)
+    {
+        BAWSol sol;
+        sol.n = n;
+        Mat_d c = Mat_d::Zero(6, 6);
+        Mat_d e = Mat_d::Zero(3, 6);
+        Mat_d epcl = Mat_d::Zero(3, 3);
+        if (para.type == LinearEla)
+        {
+            c.diagonal().setConstant(para.mu);
+            c(0, 0) = c(1, 1) = c(2, 2) = para.lambda + 2.0 * para.mu;
+            c(0, 1) = c(0, 2) = c(1, 0) = c(1, 2) = c(2, 0) = c(2, 1) = para.lambda;
+        }
+        else
+        {
+            c = para.c;
+            e = para.e;
+            epcl = para.epcl;
+        }
+
+        Mat_d Gamma = Mat_d::Zero(3, 3);
+        Vec_d gamma = Vec_d::Zero(3);
+        for (Idx i = 0; i < 3; ++i)
+            for (Idx l = 0; l < 3; ++l)
+                for (Idx j = 0; j < 3; ++j)
+                    for (Idx k = 0; k < 3; ++k)
+                        Gamma(i, l) += c(VoigtIdx(i, j), VoigtIdx(k, l)) * n(j) * n(k);
+        if (para.type == Piez)
+            for (Idx i = 0; i < 3; ++i)
+                for (Idx j = 0; j < 3; ++j)
+                    for (Idx k = 0; k < 3; ++k)
+                        gamma(i) += e(k, VoigtIdx(i, j)) * n(j) * n(k);
+
+        double tildepcl = (n.transpose() * epcl * n)(0, 0);
+        if (para.type == Piez && std::abs(tildepcl) > EPS)
+            Gamma += gamma * gamma.transpose() / tildepcl;
+
+        Eigen::SelfAdjointEigenSolver<Mat_d> eig(Gamma / para.rho);
+
+        // eig(K, rho * I) returns mass-normalized displacement eigenvectors.
+        // Store the corresponding electric-potential component as the fourth
+        // entry of each BAW eigenvector, matching MATLAB's [U, PHI] output.
+        sol.eigVec.resize(4, 3);
+        sol.eigVec.topRows(3) = eig.eigenvectors().template cast<Complex>() /
+                                std::sqrt(para.rho);
+        sol.eigVec.row(3).setZero();
+        if (para.type == Piez && std::abs(tildepcl) > EPS)
+            sol.eigVec.row(3) = (sol.eigVec.topRows(3).transpose() *
+                                 gamma.template cast<Complex>() / tildepcl)
+                                    .transpose();
+
+        sol.eigVal.resize(3);
+        for (Idx i = 0; i < 3; ++i)
+            sol.eigVal(i) = std::sqrt(Complex(eig.eigenvalues()(i), 0.0));
+        return sol;
     }
     void deviceArray::setDeviceArray(Mat_i &deviceArray, Eigen::Vector3d myori)
     {
