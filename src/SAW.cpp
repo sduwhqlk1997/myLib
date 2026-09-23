@@ -1121,6 +1121,8 @@ namespace SAW2_5D
     }
     BAWSol solveBAW(material para, Vec_t<double> n)
     {
+        // n:波方向，单位向量
+        // para:材料参数
         BAWSol sol;
         sol.n = n;
         Mat_d c = Mat_d::Zero(6, 6);
