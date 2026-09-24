@@ -90,13 +90,27 @@ namespace SAW2_5D
                                  Mat_d &dofIdx, SparseMat_t<Complex> &K, Vec_i &dof2Nodes);
     void treatPMLDirBoundCond(Mat_d dom, Mat_d &dofIdx, SparseMat_t<Complex> &K, Vec_i &dof2Nodes, pmlPosition pos, double scale);
     /*计算压电波动方程的体波和表面波解*/
-    struct BAWSol
+    struct BAWSol // 体波 u=eigVec(:,i)*exp(-i*eigVal(i)*n*x)
     {
         Vec_t<double> n;       // 波矢方向单位向量
-        Mat_t<Complex> eigVec; // Christoffel 方程解的特征向量（极化方向）
+        Mat_t<Complex> eigVec; // Christoffel 方程解的特征向量（极化方向），每列对应一个特征值，每行依次为三个位移波幅和一个电势波幅
         Vec_t<Complex> eigVal; // Christoffel 方程解的特征值（波速）
     };
+    struct SAWSol // 表面波解 u = eigVec(:,i)*exp(-i*beta(x1-lambda*x3-vt))
+    {
+        double vSAW;           // 表面波波速
+        Vec_t<Complex> lambda; // lambda=gamma/beta，beta为表面波波数，gamma为x3方向衰减系数
+        Mat_t<Complex> eigVec; // 表面波解的特征向量（极化方向），每列对应一个特征值，每行依次为三个位移波幅和一个电势波幅
+    };
+    struct GeneralWave // 波解的统一格式
+    {
+        Mat_t<Complex> k;  // 波矢矩阵，每列为一个波矢
+        Mat_t<Complex> U0; // 波幅矩阵，每列为一个波矢对应的波幅，每行依次为三个位移波幅和一个电势波幅
+    };
     BAWSol solveBAW(material para, Vec_t<double> n); // 求解体波的特征值问题
+    SAWSol solveSAW(material para, double vSAW);     // 求解表面波的特征值问题
+    GeneralWave toGeneralWave(const BAWSol &baw, double w);
+    GeneralWave toGeneralWave(const SAWSol &saw, double w);
     /*子结构定义*/
     enum typeBaseStructure
     {
@@ -278,6 +292,7 @@ namespace SAW2_5D
         int numSubStructures = 0;                       // 子结构种类数
 
     public:
+        double w = 0;                  // 工作频率
         std::vector<SubProb> subProbs; // 子问题（用于区域分解），索引号表示子问题类型编号
         Mat_i baseStructureArray;      // 器件子结构序列，其中的数字表示子结构类型，当未调用区域分解函数时，数字与subStructures变量的索引对应；当调用过区域分解函数时，则数字对应于subProbs的索引
         Eigen::Matrix<geoDom, Eigen::Dynamic,
@@ -297,6 +312,14 @@ namespace SAW2_5D
             numSubStructures = baseStructures.size();
             subStructures.reserve(numSubStructures);
             subStructures = std::move(baseStructures);
+            if (numSubStructures == 0)
+            {
+                std::cout << "deviceArray::deviceArray:请注意，器件子结构为空！\n";
+            }
+            else
+            {
+                w = subStructures.at(0).para_p.w;
+            }
         }
         void setDeviceArray(Mat_i &deviceArray, Eigen::Vector3d ori = Eigen::Vector3d(0, 0, 0));
         /*无量纲化*/

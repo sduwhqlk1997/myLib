@@ -1177,6 +1177,72 @@ namespace SAW2_5D
             sol.eigVal(i) = std::sqrt(Complex(eig.eigenvalues()(i), 0.0));
         return sol;
     }
+    SAWSol solveSAW(material para, double vSAW)
+    {
+        Eigen::Matrix<double, 4, 4> A2 = Eigen::Matrix<double, 4, 4>::Zero();
+        Eigen::Matrix<double, 4, 4> A1 = Eigen::Matrix<double, 4, 4>::Zero();
+        Eigen::Matrix<double, 4, 4> A0 = Eigen::Matrix<double, 4, 4>::Zero();
+
+        for (Idx i = 0; i < 3; ++i)
+        {
+            for (Idx l = 0; l < 3; ++l)
+            {
+                A2(i, l) = -para.c(VoigtIdx(i, 2), VoigtIdx(2, l));
+                A1(i, l) = para.c(VoigtIdx(i, 0), VoigtIdx(2, l)) +
+                           para.c(VoigtIdx(i, 2), VoigtIdx(0, l));
+                A0(i, l) = -para.c(VoigtIdx(i, 0), VoigtIdx(0, l));
+            }
+
+            A2(i, 3) = -para.e(2, VoigtIdx(i, 2));
+            A2(3, i) = -para.e(2, VoigtIdx(2, i));
+            A1(i, 3) = para.e(0, VoigtIdx(i, 2)) +
+                       para.e(2, VoigtIdx(i, 0));
+            A1(3, i) = para.e(0, VoigtIdx(2, i)) +
+                       para.e(2, VoigtIdx(0, i));
+            A0(i, 3) = -para.e(0, VoigtIdx(i, 0));
+            A0(3, i) = -para.e(0, VoigtIdx(0, i));
+        }
+
+        A2(3, 3) = para.epcl(2, 2);
+        A1(3, 3) = -(para.epcl(0, 2) + para.epcl(2, 0));
+        A0(3, 3) = para.epcl(0, 0);
+        A0.topLeftCorner<3, 3>().diagonal().array() += vSAW * vSAW * para.rho;
+
+        // Linearize (A0 + lambda*A1 + lambda^2*A2)x = 0.
+        Eigen::Matrix<double, 8, 8> lhs = Eigen::Matrix<double, 8, 8>::Zero();
+        Eigen::Matrix<double, 8, 8> rhs = Eigen::Matrix<double, 8, 8>::Zero();
+        lhs.topRightCorner<4, 4>().setIdentity();
+        lhs.bottomLeftCorner<4, 4>() = -A0;
+        lhs.bottomRightCorner<4, 4>() = -A1;
+        rhs.topLeftCorner<4, 4>().setIdentity();
+        rhs.bottomRightCorner<4, 4>() = A2;
+
+        Eigen::GeneralizedEigenSolver<Eigen::Matrix<double, 8, 8>> eig(lhs, rhs);
+        SAWSol sol;
+        sol.lambda = eig.eigenvalues().template cast<Complex>();
+        sol.eigVec = eig.eigenvectors().topRows(4).template cast<Complex>();
+        sol.vSAW = vSAW;
+        return sol;
+    }
+    GeneralWave toGeneralWave(const BAWSol &baw, double w)
+    {
+        GeneralWave wave;
+        Vec_t<Complex> k0 = Complex(w) / baw.eigVal.array(); // 波数
+        wave.k = baw.n * k0.transpose();
+        wave.U0 = baw.eigVec;
+        return wave;
+    }
+    GeneralWave toGeneralWave(const SAWSol &saw, double w)
+    {
+        GeneralWave wave;
+        Complex beta = Complex(w) / saw.vSAW;
+        Vec_t<Complex> gamma = saw.lambda * beta;
+        wave.k = Mat_t<Complex>::Zero(3, saw.lambda.size());
+        wave.k.row(0) = Mat_t<Complex>::Constant(1, saw.lambda.size(), beta);
+        wave.k.row(2) = gamma.transpose();
+        wave.U0 = saw.eigVec;
+        return wave;
+    }
     void deviceArray::setDeviceArray(Mat_i &deviceArray, Eigen::Vector3d myori)
     {
         // this->ori = myori;
@@ -1353,6 +1419,7 @@ namespace SAW2_5D
                 }
             }
         }
+        this->w /= dimScales.omega0;
     }
     void deviceArray::recoverDimSolution()
     {
@@ -1749,6 +1816,7 @@ namespace SAW2_5D
                                   // 6:PMLIDT; 7:PMLRef; 8:PMLBar
                                   // 9:PMLLB; 10:PMLRB
         baseStructureArray = genbaResArray(nIDT, nRef, nBar);
+        this->w = omega;
         std::cout << "器件子结构序列为：\n"
                   << baseStructureArray << "\n";
         double waveLen{2 * xIDT}; // 典型波长
