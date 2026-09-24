@@ -18,6 +18,8 @@ namespace myEigen // 基于Eigen开发的一些常用矩阵操作
     template <typename Scalar>
     SparseMat_t<Scalar> blkdiag(const std::vector<SparseMat_t<Scalar>> &matBloks, bool ifOMP = false);
     template <typename Scalar>
+    SparseMat_t<Scalar> blkdiag(const std::vector<Mat_t<Scalar>> &matBloks, bool ifOMP = false);
+    template <typename Scalar>
     SparseMat_t<Scalar> blkMat(const std::vector<std::vector<SparseMat_t<Scalar>>> &matBloks, bool ifOMP = false);
     template <typename Scalar>
     SparseMat_t<Scalar>

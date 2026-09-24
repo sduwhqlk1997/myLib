@@ -73,7 +73,79 @@ namespace myEigen
 
         return result;
     }
+    template <typename Scalar>
+    SparseMat_t<Scalar> blkdiag(const std::vector<Mat_t<Scalar>> &matBloks, bool ifOMP)
+    {
+        // 将matBloks中的稠密矩阵块按顺序拼接成块对角稀疏矩阵
+        // ifOMP:是否使用OpenMP并行化
+        if (matBloks.empty())
+            return SparseMat_t<Scalar>();
 
+        const Idx nBloks = static_cast<Idx>(matBloks.size());
+        std::vector<Idx> posStartRow(nBloks, 0), posStartCol(nBloks, 0), nnzStart(nBloks, 0),
+            nnzPerBlok(nBloks, 0);
+        Idx totalRows = 0;
+        Idx totalCols = 0;
+        Idx nnz = 0;
+        for (Idx i = 0; i < nBloks; ++i)
+        {
+            posStartRow[i] = totalRows;
+            posStartCol[i] = totalCols;
+            totalRows += matBloks[i].rows();
+            totalCols += matBloks[i].cols();
+            nnzStart[i] = nnz;
+            for (Idx col = 0; col < matBloks[i].cols(); ++col)
+            {
+                for (Idx row = 0; row < matBloks[i].rows(); ++row)
+                {
+                    if (matBloks[i](row, col) != Scalar(0))
+                        ++nnzPerBlok[i];
+                }
+            }
+            nnz += nnzPerBlok[i];
+        }
+
+        std::vector<Eigen::Triplet<Scalar, Idx>> triplets(nnz);
+        auto fillTriplets = [&](Idx i)
+        {
+            Idx idxTemp = 0;
+            for (Idx col = 0; col < matBloks[i].cols(); ++col)
+            {
+                for (Idx row = 0; row < matBloks[i].rows(); ++row)
+                {
+                    const Scalar &value = matBloks[i](row, col);
+                    if (value != Scalar(0))
+                    {
+                        triplets[nnzStart[i] + idxTemp] =
+                            Eigen::Triplet<Scalar, Idx>{row + posStartRow[i], col + posStartCol[i], value};
+                        ++idxTemp;
+                    }
+                }
+            }
+        };
+
+        if (ifOMP)
+        {
+#pragma omp parallel
+            {
+                const int sizeOmp = omp_get_num_threads();
+                const std::vector<std::pair<int, int>> omp_task = myOMP::distributeTasks(sizeOmp, nBloks);
+                const Idx rankOmp = omp_get_thread_num();
+                for (Idx i = omp_task[rankOmp].first;
+                     i < omp_task[rankOmp].first + omp_task[rankOmp].second; ++i)
+                    fillTriplets(i);
+            }
+        }
+        else
+        {
+            for (Idx i = 0; i < nBloks; ++i)
+                fillTriplets(i);
+        }
+
+        SparseMat_t<Scalar> result(totalRows, totalCols);
+        result.setFromTriplets(triplets.begin(), triplets.end());
+        return result;
+    }
     template <typename Scalar>
     SparseMat_t<Scalar> blkMat(const std::vector<std::vector<SparseMat_t<Scalar>>> &matBloks, bool ifOMP)
     {
@@ -332,6 +404,8 @@ namespace myEigen
     }
     template SparseMat_t<Complex> blkdiag(const std::vector<SparseMat_t<Complex>> &matBloks, bool ifOMP);
     template SparseMat_t<double> blkdiag(const std::vector<SparseMat_t<double>> &matBloks, bool ifOMP);
+    template SparseMat_t<Complex> blkdiag(const std::vector<Mat_t<Complex>> &matBloks, bool ifOMP);
+    template SparseMat_t<double> blkdiag(const std::vector<Mat_t<double>> &matBloks, bool ifOMP);
     template SparseMat_t<Complex> blkMat(const std::vector<std::vector<SparseMat_t<Complex>>> &matBloks, bool ifOMP);
     template SparseMat_t<double> blkMat(const std::vector<std::vector<SparseMat_t<double>>> &matBloks, bool ifOMP);
     // template void addSpMatColOrRow(SparseMat_t<double> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);
