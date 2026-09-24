@@ -1119,6 +1119,26 @@ namespace SAW2_5D
         dofIdx = myEigen::removeRowsDenseMat<double>(dofIdx, idxDel);
         dof2Nodes = myEigen::removeRowsDenseMat<Idx>(dof2Nodes, idxDel);
     }
+    std::vector<Vec_t<double>> genWaveVecs_xz(std::pair<double, double> range, Idx N)
+    {
+        // rannge.first:起始角度，与 x 正半轴夹角，单位：度；
+        // range.second: 终止角度，与 x 正半轴夹角，单位：度
+        // N: 生成的单位波矢数量
+        // 将 theta1 到 theta2 的夹角 n+1 等分，输出 n 个等间隔的位于x-z平面内的单位向量。
+        std::vector<Vec_t<double>> waveVecs;
+        waveVecs.reserve(N);
+        double theta1 = range.first;
+        double theta2 = range.second;
+        double dTheta = (theta2 - theta1) / (N + 1);
+        for (Idx i = 1; i <= N; ++i)
+        {
+            double theta = theta1 + i * dTheta;
+            double x = std::cos(theta * M_PI / 180.0);
+            double z = std::sin(theta * M_PI / 180.0);
+            waveVecs.emplace_back(Eigen::Vector3d(x, 0.0, z));
+        }
+        return waveVecs;
+    }
     BAWSol solveBAW(material para, Vec_t<double> n)
     {
         // n:波方向，单位向量

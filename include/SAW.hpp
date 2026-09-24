@@ -107,8 +107,9 @@ namespace SAW2_5D
         Mat_t<Complex> k;  // 波矢矩阵，每列为一个波矢
         Mat_t<Complex> U0; // 波幅矩阵，每列为一个波矢对应的波幅，每行依次为三个位移波幅和一个电势波幅
     };
-    BAWSol solveBAW(material para, Vec_t<double> n); // 求解体波的特征值问题
-    SAWSol solveSAW(material para, double vSAW);     // 求解表面波的特征值问题
+    std::vector<Vec_t<double>> genWaveVecs_xz(std::pair<double, double> range, Idx N); // 生成在xz平面内的一组波矢方向向量
+    BAWSol solveBAW(material para, Vec_t<double> n);                                   // 求解体波的特征值问题
+    SAWSol solveSAW(material para, double vSAW);                                       // 求解表面波的特征值问题
     GeneralWave toGeneralWave(const BAWSol &baw, double w);
     GeneralWave toGeneralWave(const SAWSol &saw, double w);
     /*子结构定义*/
