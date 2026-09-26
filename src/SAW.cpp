@@ -225,7 +225,7 @@ namespace SAW2_5D
         {
             A00 = assembleMat(myMesh, Gauss, Eigen::Vector3i{0, 0, 0}, Eigen::Vector3i{0, 0, 0}, ifOMP);
             A00 *= para.rho;
-            Muu = myEigen::blkdiag<double>({A00, A00, A00}, ifOMP);
+            Muu = myEigen::blkdiag<double>(std::vector<SparseMat_t<double>>{A00, A00, A00}, ifOMP);
         }
         // 组装K的四个块Kuu,Kup,Kpp
         SparseMat_t<double> Kuu, Kup, Kpp;
@@ -429,7 +429,7 @@ namespace SAW2_5D
         {
             A00 = assembleMat(myMesh, Gauss, Eigen::Vector3i{0, 0, 0}, Eigen::Vector3i{0, 0, 0}, ifOMP);
             A00 *= para.rho;
-            Muu = myEigen::blkdiag<double>({A00, A00, A00}, ifOMP);
+            Muu = myEigen::blkdiag<double>(std::vector<SparseMat_t<double>>{A00, A00, A00}, ifOMP);
         }
         // 刚度矩阵
         std::vector<std::vector<SparseMat_t<double>>> blkK(3);
@@ -560,7 +560,7 @@ namespace SAW2_5D
         {
             A00 = assembleMat(coef00, myMesh, Gauss, Eigen::Vector3i{0, 0, 0}, Eigen::Vector3i{0, 0, 0}, ifOMP);
             A00 *= para.rho;
-            Muu = myEigen::blkdiag<Complex>({A00, A00, A00}, ifOMP);
+            Muu = myEigen::blkdiag<Complex>(std::vector<SparseMat_t<Complex>>{A00, A00, A00}, ifOMP);
         }
         SparseMat_t<Complex> Kuu, Kup, Kpp;
         std::vector<std::vector<SparseMat_t<Complex>>> blkKuu(3), blkKup(3);
