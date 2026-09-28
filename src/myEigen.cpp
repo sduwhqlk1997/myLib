@@ -73,8 +73,8 @@ namespace myEigen
 
         return result;
     }
-    template <typename Scalar>
-    SparseMat_t<Scalar> blkdiag(const std::vector<Mat_t<Scalar>> &matBloks, bool ifOMP)
+    template <typename Scalar, int StorageOrder>
+    SparseMat_t<Scalar, StorageOrder> blkdiag(const std::vector<Mat_t<Scalar>> &matBloks, bool ifOMP)
     {
         // 将matBloks中的稠密矩阵块按顺序拼接成块对角稀疏矩阵
         // ifOMP:是否使用OpenMP并行化
@@ -142,7 +142,7 @@ namespace myEigen
                 fillTriplets(i);
         }
 
-        SparseMat_t<Scalar> result(totalRows, totalCols);
+        SparseMat_t<Scalar, StorageOrder> result(totalRows, totalCols);
         result.setFromTriplets(triplets.begin(), triplets.end());
         return result;
     }
@@ -406,6 +406,8 @@ namespace myEigen
     template SparseMat_t<double> blkdiag(const std::vector<SparseMat_t<double>> &matBloks, bool ifOMP);
     template SparseMat_t<Complex> blkdiag(const std::vector<Mat_t<Complex>> &matBloks, bool ifOMP);
     template SparseMat_t<double> blkdiag(const std::vector<Mat_t<double>> &matBloks, bool ifOMP);
+    template SparseMat_t<Complex, Eigen::RowMajor> blkdiag<Complex, Eigen::RowMajor>(const std::vector<Mat_t<Complex>> &matBloks, bool ifOMP);
+    template SparseMat_t<double, Eigen::RowMajor> blkdiag<double, Eigen::RowMajor>(const std::vector<Mat_t<double>> &matBloks, bool ifOMP);
     template SparseMat_t<Complex> blkMat(const std::vector<std::vector<SparseMat_t<Complex>>> &matBloks, bool ifOMP);
     template SparseMat_t<double> blkMat(const std::vector<std::vector<SparseMat_t<double>>> &matBloks, bool ifOMP);
     // template void addSpMatColOrRow(SparseMat_t<double> &K, std::vector<Idx> Idx1, std::vector<Idx> Idx2, Idx flag);
