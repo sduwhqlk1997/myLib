@@ -32,10 +32,12 @@ namespace myOMP
     std::vector<int> assignThreadCount(int numThreads, std::vector<T> nJobs)
     {
         // 将numThreads仅可能成比例地分配给nJobs个任务，返回每个任务分配的线程数
-        std::vector<int> threadCounts(nJobs.size(), 0);
-        if (numThreads <= 0 || nJobs.empty())
-            return threadCounts;
 
+        if (numThreads <= 0 || nJobs.empty())
+            return std::vector<int>(nJobs.size(), 0);
+        if (numThreads <= nJobs.size())
+            return std::vector<int>(nJobs.size(), 1);
+        std::vector<int> threadCounts(nJobs.size(), 0);
         long long totalJobs = 0;
         for (int jobs : nJobs)
             totalJobs += jobs > 0 ? jobs : 0;
