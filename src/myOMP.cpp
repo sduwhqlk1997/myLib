@@ -42,15 +42,28 @@ namespace myOMP
         if (totalJobs == 0)
             return threadCounts;
 
+        int activeJobs = 0;
+        for (const auto jobs : nJobs)
+            if (jobs > 0)
+                ++activeJobs;
+        // There are not enough threads to give every nonzero task one.
+        if (numThreads < activeJobs)
+            return threadCounts;
+        const int remainingThreads = numThreads - activeJobs;
+
         std::vector<long long> remainders(nJobs.size(), 0);
-        int assigned = 0;
+        int assigned = activeJobs;
         for (size_t i = 0; i < nJobs.size(); ++i)
         {
             const long long jobs = nJobs[i] > 0 ? nJobs[i] : 0;
-            const long long weightedThreads = static_cast<long long>(numThreads) * jobs;
-            threadCounts[i] = static_cast<int>(weightedThreads / totalJobs);
+            if (jobs == 0)
+                continue;
+            threadCounts[i] = 1;
+            const long long weightedThreads = static_cast<long long>(remainingThreads) * jobs;
+            const int extraThreads = static_cast<int>(weightedThreads / totalJobs);
+            threadCounts[i] += extraThreads;
             remainders[i] = weightedThreads % totalJobs;
-            assigned += threadCounts[i];
+            assigned += extraThreads;
         }
 
         // 按余数从大到小分配因整数取整而剩余的线程。
@@ -62,6 +75,8 @@ namespace myOMP
                 if (remainders[i] > remainders[best])
                     best = i;
             }
+            if (remainders[best] < 0)
+                break;
             ++threadCounts[best];
             remainders[best] = -1;
             ++assigned;
