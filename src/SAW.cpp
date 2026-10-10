@@ -2,7 +2,6 @@
 #include <Eigen/Eigenvalues>
 #include <myEigen.hpp>
 #include <myOMP.hpp>
-#include <mat2eigen.hpp>
 namespace SAW2_5D
 {
     std::pair<std::vector<Idx>, std::vector<Idx>>
