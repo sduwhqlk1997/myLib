@@ -144,7 +144,7 @@ namespace SAW2_5D
                               int Nx_p, int Ny_p, int Nz_p,
                               int Nx_e, int Nz_e)
     {
-        double scale_y = dom2(2, 1) - dom2(2, 0);
+        double scale_y = dom2(1, 1) - dom2(1, 0);
         double scale_z = dom2(2, 1) - dom2(2, 0);
         double eps_y = EPS * scale_y;
         double eps_z = EPS * scale_z;
