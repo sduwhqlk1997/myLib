@@ -18,6 +18,22 @@ namespace myOMP
         }
         return task_omp;
     }
+    std::vector<std::pair<int, int>> distributeTasks_byWidth(int width, int totalTasks){
+        // 返回值：first为对应线程的起始任务编号，second为任务数量
+        // 将totalTasks各任务分成若干份，每份任务数量尽量等于width，返回每份任务的起始编号和数量
+        std::vector<std::pair<int, int>> taskGroups;
+        if (width <= 0 || totalTasks <= 0)
+            return taskGroups;
+
+        int start = 0;
+        while (start < totalTasks)
+        {
+            const int count = totalTasks - start < width ? totalTasks - start : width;
+            taskGroups.emplace_back(start, count);
+            start += count;
+        }
+        return taskGroups;
+    }
     void initOmpMklNestedParallel()
     {
         omp_set_dynamic(0);
