@@ -1119,7 +1119,7 @@ namespace SAW2_5D
         dof2Nodes = myEigen::removeRowsDenseMat<Idx>(dof2Nodes, idxDel);
     }
     template <typename Scalar>
-    void sortDof_dim1(Mat_d &dofIdx, SparseMat_t<Scalar> &K, Vec_t<Scalar> &F, int dim)
+    void sortDof(Mat_d &dofIdx, SparseMat_t<Scalar> &K, Vec_t<Scalar> &F, int dim)
     {
         // 将自由度按dofIdx的第dim列升序排列，K和F也相应调整，dofIdX的第dim列可以有相同的值
         std::vector<Idx> order(dofIdx.rows());
@@ -1143,7 +1143,46 @@ namespace SAW2_5D
         triplets.reserve(K.nonZeros());
         for (Idx col = 0; col < K.outerSize(); ++col)
         {
-            for (SparseMat_t<Scalar>::InnerIterator iter(K, col); iter; ++iter)
+            for (typename SparseMat_t<Scalar>::InnerIterator iter(K, col); iter; ++iter)
+                triplets.emplace_back(oldToNew[iter.row()], oldToNew[iter.col()], iter.value());
+        }
+        SparseMat_t<Scalar> sortedK(K.rows(), K.cols());
+        sortedK.setFromTriplets(triplets.begin(), triplets.end());
+
+        dofIdx = std::move(sortedDofIdx);
+        F = std::move(sortedF);
+        K = std::move(sortedK);
+    }
+    template <typename Scalar>
+    void sortDof(Mat_d &dofIdx, SparseMat_t<Scalar> &K, Vec_t<Scalar> &F, int dim1, int dim2)
+    {
+        // 将自由度按dofIdx的第dim1和dim2列升序排列，K和F也相应调整，即优先按dim1列排序，再按dim2列排序
+        std::vector<Idx> order(dofIdx.rows());
+        std::iota(order.begin(), order.end(), 0);
+        std::stable_sort(order.begin(), order.end(),
+                         [&dofIdx, dim1, dim2](Idx a, Idx b)
+                         {
+                             if (dofIdx(a, dim1) != dofIdx(b, dim1))
+                                 return dofIdx(a, dim1) < dofIdx(b, dim1);
+                             return dofIdx(a, dim2) < dofIdx(b, dim2);
+                         });
+
+        std::vector<Idx> oldToNew(order.size());
+        Mat_d sortedDofIdx(dofIdx.rows(), dofIdx.cols());
+        Vec_t<Scalar> sortedF(F.size());
+        for (Idx newIdx = 0; newIdx < static_cast<Idx>(order.size()); ++newIdx)
+        {
+            const Idx oldIdx = order[newIdx];
+            oldToNew[oldIdx] = newIdx;
+            sortedDofIdx.row(newIdx) = dofIdx.row(oldIdx);
+            sortedF(newIdx) = F(oldIdx);
+        }
+
+        std::vector<Eigen::Triplet<Scalar, Idx>> triplets;
+        triplets.reserve(K.nonZeros());
+        for (Idx col = 0; col < K.outerSize(); ++col)
+        {
+            for (typename SparseMat_t<Scalar>::InnerIterator iter(K, col); iter; ++iter)
                 triplets.emplace_back(oldToNew[iter.row()], oldToNew[iter.col()], iter.value());
         }
         SparseMat_t<Scalar> sortedK(K.rows(), K.cols());
@@ -1361,6 +1400,54 @@ namespace SAW2_5D
         baseStructureArray = std::move(DDM);
         // numSubStructures = bandedSubstructure.size();
         return bandedSubstructure;
+    }
+    void deviceArray::sortAllDof(int dim, bool ifOMP)
+    {
+        if (subStructures.size() > 0)
+        {
+#pragma omp parallel for if (ifOMP) schedule(dynamic) num_threads(subStructures.size())
+            for (int i = 0; i < subStructures.size(); ++i)
+            {
+                sortDof(subStructures[i].dofIdx, subStructures[i].K, subStructures[i].F, dim);
+            }
+        }
+        else if (subProbs.size() > 0)
+        {
+#pragma omp parallel for if (ifOMP) schedule(dynamic) num_threads(subProbs.size())
+            for (int i = 0; i < subProbs.size(); ++i)
+            {
+                sortDof(subProbs[i].dofIdx, subProbs[i].K, subProbs[i].F, dim);
+            }
+        }
+        else
+        {
+            std::cout << "器件中没有子结构或子问题，无法进行自由度排序！\n";
+            std::exit(EXIT_FAILURE);
+        }
+    }
+    void deviceArray::sortAllDof(int dim1, int dim2, bool ifOMP)
+    {
+        if (subStructures.size() > 0)
+        {
+#pragma omp parallel for if (ifOMP) schedule(dynamic) num_threads(subStructures.size())
+            for (int i = 0; i < subStructures.size(); ++i)
+            {
+                sortDof(subStructures[i].dofIdx, subStructures[i].K, subStructures[i].F, dim1, dim2);
+            }
+        }
+        else if (subProbs.size() > 0)
+        {
+#pragma omp parallel for if (ifOMP) schedule(dynamic) num_threads(subProbs.size())
+            for (int i = 0; i < subProbs.size(); ++i)
+            {
+                sortDof(subProbs[i].dofIdx, subProbs[i].K, subProbs[i].F, dim1, dim2);
+            }
+        }
+        else
+        {
+            std::cout << "器件中没有子结构或子问题，无法进行自由度排序！\n";
+            std::exit(EXIT_FAILURE);
+        }
     }
     void deviceArray::genDimScales(double U0)
     {
@@ -1855,8 +1942,7 @@ namespace SAW2_5D
         myFEM::meshType mType, myFEM::elemType eType, // 网格类型和有限元类型
         Idx quaOrder,                                 // Gauss积分阶数
         double U0,
-        bool ifNd, // 是否执行无量纲化
-        bool ifSort, int sortDim)
+        bool ifNd) // 是否执行无量纲化
     {
 
         // 所有器件子结构的原点默认为(0,0,0)，PML区域则是按截断方向向外延伸
@@ -1946,14 +2032,6 @@ namespace SAW2_5D
                                NxEleIDT, NxEleRef, NzEle,
                                NxPML, NzPML);
         formGeoArray(Eigen::Vector3d(-dx, 0, -dz));
-        if (ifSort)
-        {
-#pragma omp parallel for num_threads(subProbs.size())
-            for (int i = 0; i < subProbs.size(); ++i)
-            {
-                sortDof_dim1(subProbs[i].dofIdx, subProbs[i].K, subProbs[i].F, sortDim);
-            }
-        }
     }
     Mat_i deviceArray::genbaResArray(Idx nIDT, Idx nRef, Idx nBar)
     {
@@ -2171,9 +2249,13 @@ namespace SAW2_5D
         this->ori = geoArray(baseStructureArray.rows() - 1, 0).dom_p.col(0); // 全局器件原点值
         // std::cout << "器件原点为：" << this->ori << "\n";
     }
-    template void sortDof_dim1<Complex>(Mat_d &dofIdx, SparseMat_t<Complex> &K, Vec_t<Complex> &F, int dim);
-    template void sortDof_dim1<double>(Mat_d &dofIdx, SparseMat_t<double> &K, Vec_t<double> &F, int dim);
-    template void sortDof_dim1<float>(Mat_d &dofIdx, SparseMat_t<float> &K, Vec_t<float> &F, int dim);
+    template void sortDof<Complex>(Mat_d &dofIdx, SparseMat_t<Complex> &K, Vec_t<Complex> &F, int dim);
+    template void sortDof<double>(Mat_d &dofIdx, SparseMat_t<double> &K, Vec_t<double> &F, int dim);
+    template void sortDof<float>(Mat_d &dofIdx, SparseMat_t<float> &K, Vec_t<float> &F, int dim);
+
+    template void sortDof<Complex>(Mat_d &dofIdx, SparseMat_t<Complex> &K, Vec_t<Complex> &F, int dim1, int dim2);
+    template void sortDof<double>(Mat_d &dofIdx, SparseMat_t<double> &K, Vec_t<double> &F, int dim1, int dim2);
+    template void sortDof<float>(Mat_d &dofIdx, SparseMat_t<float> &K, Vec_t<float> &F, int dim1, int dim2);
 }
 // std::cout << "无量纲化前:\n";
 //         for (Idx i = 0; i < subStructures.size(); ++i)

@@ -91,7 +91,9 @@ namespace SAW2_5D
     void treatPMLDirBoundCond(Mat_d dom, Mat_d &dofIdx, SparseMat_t<Complex> &K, Vec_i &dof2Nodes, pmlPosition pos, double scale);
     /*排序*/
     template <typename Scalar>
-    void sortDof_dim1(Mat_d &dofIdx, SparseMat_t<Scalar> &K, Vec_t<Scalar> &F, int dim = 0); // 将自由度按dofIdx的第dim列升序排列，K和F也相应调整
+    void sortDof(Mat_d &dofIdx, SparseMat_t<Scalar> &K, Vec_t<Scalar> &F, int dim = 0); // 将自由度按dofIdx的第dim列升序排列，K和F也相应调整
+    template <typename Scalar>
+    void sortDof(Mat_d &dofIdx, SparseMat_t<Scalar> &K, Vec_t<Scalar> &F, int dim1, int dim2); // 将自由度按dofIdx的第dim1和dim2列升序排列，K和F也相应调整
     /*计算压电波动方程的体波和表面波解*/
     struct BAWSol // 体波 u=eigVec(:,i)*exp(-i*eigVal(i)*n*x)
     {
@@ -331,6 +333,9 @@ namespace SAW2_5D
         void genDimScales(double U0);
         void dimensionless();      // 无量纲化
         void recoverDimSolution(); // 还原解的量纲
+        /*对所有子问题自由度排序*/
+        void sortAllDof(int dim = 0, bool ifOMP = false); // 将所有子问题的自由度按dofIdx的第dim列升序排列，K和F也相应调整
+        void sortAllDof(int dim1, int dim2, bool ifOMP = false);
         /* 获取私有变量取值*/
     public:
         baseStructure getSubStructure(Idx index) const
@@ -374,7 +379,6 @@ namespace SAW2_5D
             myFEM::meshType mType = myFEM::hex, myFEM::elemType eType = myFEM::Q2, // 网格类型和有限元类型
             Idx quaOrder = 4,                                                      // Gauss积分阶数
             double U0 = 1e-14,
-            bool ifNd = true,                      // 是否执行无量纲化
-            bool ifSort = false, int sortDim = 0); // 是否对自由度进行排序
+            bool ifNd = true); // 是否执行无量纲化
     };
 }
