@@ -586,7 +586,7 @@ namespace myFEM
         if (myMesh.elemtype != Q2)
         {
             std::cout << myMesh.elemtype << "\n";
-            std::cout << "genBdFace：目前该函数仅适用于Q2有限元！\n";
+            std::cout << "genBdFace: this function currently supports only Q2 finite elements!\n";
             std::exit(EXIT_FAILURE);
         }
         myMesh.bdFace.face2elem.resize(6);
@@ -772,7 +772,7 @@ namespace myFEM
                 }
                 else
                 {
-                    std::cerr << "错误：高阶偏导数未定义" << std::endl;
+                    std::cerr << "Error: higher-order partial derivatives are not defined" << std::endl;
                     std::exit(EXIT_FAILURE);
                 }
                 result *= result_temp;
@@ -876,7 +876,7 @@ namespace myFEM
         }
         default:
         {
-            std::cout << "未定义的Gauss点类型\n";
+            std::cout << "Undefined Gauss point type\n";
             std::exit(EXIT_FAILURE);
             break;
         }
@@ -897,7 +897,7 @@ namespace myFEM
             nBaseFun = 27;
             break;
         default:
-            std::cout << "未定义基函数类型\n";
+            std::cout << "Undefined basis function type\n";
             std::exit(EXIT_FAILURE);
             break;
         }
@@ -1241,7 +1241,7 @@ namespace myFEM
     {
         if (myMesh.GaussPt.size() != myMesh.nElems)
         {
-            std::cout << "请先构造所有单元的Gauss积分节点\n";
+            std::cout << "Construct the Gauss integration points for all elements first\n";
             std::exit(EXIT_FAILURE);
         }
         const Mat_d *testPtr, *trailPtr;
@@ -1408,7 +1408,7 @@ namespace myFEM
     {
         if (myMesh.GaussPt.size() != myMesh.nElems)
         {
-            std::cout << "请先构造所有单元的Gauss积分节点\n";
+            std::cout << "Construct the Gauss integration points for all elements first\n";
             std::exit(EXIT_FAILURE);
         }
         int nBaseFun = myMesh.elems.cols();
@@ -1500,7 +1500,7 @@ namespace myFEM
     {
         if (a.size() != b.size())
         {
-            std::cout << "点的维度不同!\n";
+            std::cout << "The point dimensions differ!\n";
             std::exit(EXIT_FAILURE);
         }
         for (int k = 0; k < a.size(); ++k)

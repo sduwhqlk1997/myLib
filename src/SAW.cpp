@@ -133,7 +133,7 @@ namespace SAW2_5D
         }
         default:
         {
-            std::cout << "材料未收录!\n";
+            std::cout << "Material is not in the library!\n";
             std::exit(EXIT_FAILURE);
             break;
         }
@@ -154,12 +154,12 @@ namespace SAW2_5D
             std::abs(dom1(1, 1) - dom2(1, 1)) > eps_y ||
             std::abs(dom1(2, 1) - dom2(2, 0)) > eps_z)
         {
-            std::cout << "电极位置不正确，请检查后重新输入！\n";
+            std::cout << "Incorrect electrode position; check the input and try again!\n";
             std::exit(EXIT_FAILURE);
         }
         if (Nx_p <= Nx_e)
         {
-            std::cout << "基底x方向的网格点数必须大于电极\n";
+            std::cout << "The substrate must have more mesh points in the x direction than the electrode\n";
             std::exit(EXIT_FAILURE);
         }
         Vec_d yGrid = Vec_d::LinSpaced(Ny_p, dom1(1, 0), dom1(1, 1));
@@ -708,7 +708,7 @@ namespace SAW2_5D
     {
         if (type != piez && type != linearElastic && type != piezPML)
         {
-            std::cout << "请输入电极区域的网格信息!\n";
+            std::cout << "Please provide mesh information for the electrode region!\n";
             std::exit(EXIT_FAILURE);
         }
         if (type == piezPML)
@@ -743,7 +743,7 @@ namespace SAW2_5D
         }
         else
         {
-            std::cout << "未定义该类子结构!\n";
+            std::cout << "Undefined substructure type!\n";
             std::exit(EXIT_FAILURE);
         }
         meshFEM = myMesh;
@@ -752,7 +752,7 @@ namespace SAW2_5D
     {
         if (type != IDT && type != refGratOpen && type != refGratShort)
         {
-            std::cout << "该子结构非IDT类结构，请使用单网格输入!\n";
+            std::cout << "This substructure is not an IDT-type structure; use a single mesh!\n";
             std::exit(EXIT_FAILURE);
         }
         double scale_x = myMesh2.Dom(0, 1) - myMesh2.Dom(0, 0);
@@ -768,7 +768,7 @@ namespace SAW2_5D
             std::abs(myMesh1.Dom(1, 1) - myMesh2.Dom(1, 1)) > eps_y ||
             std::abs(myMesh1.Dom(2, 1) - myMesh2.Dom(2, 0)) > eps_z)
         {
-            std::cout << "电极位置不正确，请检查后重新输入！\n";
+            std::cout << "Incorrect electrode position; check the input and try again!\n";
             std::exit(EXIT_FAILURE);
         }
         // 基底
@@ -976,7 +976,7 @@ namespace SAW2_5D
             F += F_temp;
         else
         {
-            std::cout << "右端项F大小错误!\n";
+            std::cout << "Incorrect size for the right-hand side F!\n";
             std::exit(EXIT_FAILURE);
         }
         // 处理矩阵
@@ -1081,7 +1081,7 @@ namespace SAW2_5D
             };
             break;
         default:
-            std::cout << "treatPMLDirBoundCond:PML位置错误！";
+            std::cout << "treatPMLDirBoundCond: incorrect PML position!";
             std::exit(EXIT_FAILURE);
             break;
         }
@@ -1421,7 +1421,7 @@ namespace SAW2_5D
         }
         else
         {
-            std::cout << "器件中没有子结构或子问题，无法进行自由度排序！\n";
+            std::cout << "Cannot sort degrees of freedom: the device has no substructures or subproblems!\n";
             std::exit(EXIT_FAILURE);
         }
     }
@@ -1445,7 +1445,7 @@ namespace SAW2_5D
         }
         else
         {
-            std::cout << "器件中没有子结构或子问题，无法进行自由度排序！\n";
+            std::cout << "Cannot sort degrees of freedom: the device has no substructures or subproblems!\n";
             std::exit(EXIT_FAILURE);
         }
     }
@@ -1463,7 +1463,8 @@ namespace SAW2_5D
             typeBaseStructure thisType = subStructures[i].type;
             if (thisType == piezPML)
             {
-                std::cout << "第" << i << "个子结构为PML，不进行无量纲化；若要使用PML请确保自己已进行无量纲化！\n";
+                std::cout << "Substructure " << i
+                          << " is a PML and will not be nondimensionalized; ensure it has been nondimensionalized before use!\n";
                 continue;
             }
             else if (thisType == none)
@@ -1521,7 +1522,8 @@ namespace SAW2_5D
             typeBaseStructure thisType = subStructures[i].type;
             if (thisType == piezPML)
             {
-                std::cout << "第" << i << "个子结构为PML，不进行无量纲化；若要使用PML请确保自己已进行无量纲化！\n";
+                std::cout << "Substructure " << i
+                          << " is a PML and will not be nondimensionalized; ensure it has been nondimensionalized before use!\n";
                 continue;
             }
             else if (thisType == none)
@@ -1948,7 +1950,7 @@ namespace SAW2_5D
         // 所有器件子结构的原点默认为(0,0,0)，PML区域则是按截断方向向外延伸
         if (nIDT <= 0)
         {
-            std::cout << "deviceArray::basicResonator:IDT数量必须大于等于1!!!！";
+            std::cout << "deviceArray::basicResonator: the number of IDTs must be at least 1!";
             std::exit(EXIT_FAILURE);
         }
         numSubStructures = 11;
@@ -1958,7 +1960,7 @@ namespace SAW2_5D
                                   // 9:PMLLB; 10:PMLRB
         baseStructureArray = genbaResArray(nIDT, nRef, nBar);
         this->w = omega;
-        std::cout << "器件子结构序列为：\n"
+        std::cout << "Device substructure sequence:\n"
                   << baseStructureArray << "\n";
         double waveLen{2 * xIDT}; // 典型波长
         // 电极宽度

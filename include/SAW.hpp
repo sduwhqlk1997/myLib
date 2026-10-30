@@ -154,7 +154,7 @@ namespace SAW2_5D
             }
             if (N == -1)
             {
-                std::cout << "baseStructure::readNmeshPt:请注意，此结构的此方向网格点数未存储！\n";
+                std::cout << "baseStructure::readNmeshPt: the mesh point count for this direction is not stored!\n";
             }
             return N;
         }
@@ -214,7 +214,7 @@ namespace SAW2_5D
                 V0 = V;
             else
             {
-                std::cout << "只有IDT结构可以设置电压！";
+                std::cout << "Voltage can only be set for IDT structures!";
                 std::exit(EXIT_FAILURE);
             }
         }
@@ -230,7 +230,7 @@ namespace SAW2_5D
         {
             if (type != refGratOpen)
             {
-                std::cout << "myTreatFloatPotentialCond：该子结构不是refGratOpen！\n";
+                std::cout << "myTreatFloatPotentialCond: this substructure is not refGratOpen!\n";
                 std::exit(EXIT_FAILURE);
             }
             treatFloatPotentialCond(dom_e(2, 0), dom_e(0, 0), dom_e(0, 1),
@@ -240,7 +240,7 @@ namespace SAW2_5D
         {
             if (type != IDT)
             {
-                std::cout << "myTreatFixedGroundCond：该子结构不是IDT！\n";
+                std::cout << "myTreatFixedGroundCond: this substructure is not IDT!\n";
                 std::exit(EXIT_FAILURE);
             }
             treatTerminalBoundCond(dom_e(2, 0), dom_e(0, 0), dom_e(0, 1), V0, dofIdx, K, F, dof2Nodes, ifOMP);
@@ -320,7 +320,7 @@ namespace SAW2_5D
             subStructures = std::move(baseStructures);
             if (numSubStructures == 0)
             {
-                std::cout << "deviceArray::deviceArray:请注意，器件子结构为空！\n";
+                std::cout << "deviceArray::deviceArray: the device has no substructures!\n";
             }
             else
             {

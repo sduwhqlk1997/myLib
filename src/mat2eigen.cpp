@@ -8,7 +8,7 @@ namespace wrMatFile
         mat_t *mat = Mat_Open(filename, MAT_ACC_RDONLY);
         if (!mat)
         {
-            std::cerr << "错误：无法打开 .mat 文件！" << std::endl;
+            std::cerr << "Error: cannot open .mat file!" << std::endl;
         }
         matvar_t *p = Mat_VarRead(mat, varname);
         int rows = p->dims[0];
@@ -45,7 +45,7 @@ namespace wrMatFile
         mat_t *mat = Mat_Open(filename, MAT_ACC_RDONLY);
         if (!mat)
         {
-            std::cerr << "错误：无法打开 .mat 文件！" << std::endl;
+            std::cerr << "Error: cannot open .mat file!" << std::endl;
         }
         matvar_t *p = Mat_VarRead(mat, varname);
         int rows = p->dims[0]; // 行数
@@ -62,7 +62,7 @@ namespace wrMatFile
         mat_t *mat = Mat_Open(filename, MAT_ACC_RDONLY);
         if (!mat)
         {
-            std::cerr << "错误：无法打开 .mat 文件！" << std::endl;
+            std::cerr << "Error: cannot open .mat file!" << std::endl;
         }
         matvar_t *p = Mat_VarRead(mat, varname);
         int rows = p->dims[0];
