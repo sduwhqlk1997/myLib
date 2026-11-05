@@ -21,12 +21,14 @@ namespace SAW2_5D
     };
     enum typeMaterial
     {
-        LN128YX,
-        Al,
-        LT42YX,
-        Cu,
-        testPiez,
-        testEla
+        LN128YX = 0,
+        Al = 1,
+        LT42YX = 2,
+        Cu = 3,
+        LGS = 4,
+        Pt = 5,
+        testPiez = 6,
+        testEla = 7
     };
     enum pmlPosition // PML位置
     {
@@ -117,6 +119,7 @@ namespace SAW2_5D
     SAWSol solveSAW(material para, double vSAW);                                       // 求解表面波的特征值问题
     GeneralWave toGeneralWave(const BAWSol &baw, double w);
     GeneralWave toGeneralWave(const SAWSol &saw, double w);
+    double genMetalizedSAW(typeMaterial piezMaterial); // 返回输入压电材料的金属化表面SAW波速
     /*子结构定义*/
     enum typeBaseStructure
     {
