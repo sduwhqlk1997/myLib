@@ -2024,7 +2024,8 @@ namespace SAW2_5D
         myFEM::meshType mType, myFEM::elemType eType, // 网格类型和有限元类型
         Idx quaOrder,                                 // Gauss积分阶数
         double U0,
-        bool ifNd) // 是否执行无量纲化
+        bool ifNd,                 // 是否执行无量纲化
+        bool ifTreateTerminalCond) // 是否处理终端边界条件（默认处理）
     {
 
         // 所有器件子结构的原点默认为(0,0,0)，PML区域则是按截断方向向外延伸
@@ -2112,7 +2113,7 @@ namespace SAW2_5D
                                NyDev, NzDev,
                                NxIDT, NxRef, NxBar,
                                NxEleIDT, NxEleRef, NzEle,
-                               NxPML, NzPML);
+                               NxPML, NzPML, ifTreateTerminalCond);
         formGeoArray(Eigen::Vector3d(-dx, 0, -dz));
     }
     Mat_i deviceArray::genbaResArray(Idx nIDT, Idx nRef, Idx nBar)
@@ -2202,7 +2203,7 @@ namespace SAW2_5D
     void deviceArray::formBaResLoPro4SubStrs(myFEM::meshType mType, myFEM::elemType eType, Idx quaOrder,
                                              Idx NyDev, Idx NzDev, Idx NxIDT, Idx NxRef, Idx NxBar,
                                              Idx NxEleIDT, Idx NxEleRef, Idx NzEle,
-                                             Idx NxPML, Idx NzPML)
+                                             Idx NxPML, Idx NzPML, bool ifTreateTerminalCond)
     {
         // 参考单元信息
         // refGaussInfo Gauss = genRefGauss(quaOrder, mType, eType);
@@ -2275,7 +2276,8 @@ namespace SAW2_5D
                 genAffineInfo(meshEle, false);
                 subStructures[i].initLinearSystem(Gauss, meshSub, meshEle, false);
                 subStructures[i].myTreatPeriodBoundCond();
-                subStructures[i].myTreatTerminalBoundCond(false);
+                if (ifTreateTerminalCond)
+                    subStructures[i].myTreatTerminalBoundCond(false);
             }
             else if (thisType == refGratOpen)
             {

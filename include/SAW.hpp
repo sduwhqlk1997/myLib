@@ -366,7 +366,7 @@ namespace SAW2_5D
         void formBaResLoPro4SubStrs(myFEM::meshType mType, myFEM::elemType eType, Idx quaOrder, // 形成基本Resonator问题的子结构的问题
                                     Idx NyDev, Idx NzDev, Idx NxIDT, Idx NxRef, Idx NxBar,
                                     Idx NxEleIDT, Idx NxEleRef, Idx NzEle,
-                                    Idx NxPML, Idx NzPML);
+                                    Idx NxPML, Idx NzPML, bool ifTreateTerminalCond);
         void formGeoArray(Eigen::Vector3d myori);
 
     public:
@@ -382,6 +382,7 @@ namespace SAW2_5D
             myFEM::meshType mType = myFEM::hex, myFEM::elemType eType = myFEM::Q2, // 网格类型和有限元类型
             Idx quaOrder = 4,                                                      // Gauss积分阶数
             double U0 = 1e-14,
-            bool ifNd = true); // 是否执行无量纲化
+            bool ifNd = true, // 是否执行无量纲化
+            bool ifTreateTerminalCond = true);
     };
 }
