@@ -1698,6 +1698,11 @@ namespace SAW2_5D
             for (Idx i = tStart; i <= tEnd; ++i)
             {
                 Idx idxSubStructure = subProbTypesVec[i][0]; // 当前的子结构编号
+                if (subStructures[idxSubStructure].type == IDT ||
+                    subStructures[idxSubStructure].type == refGratShort)
+                {
+                    subProbs[i].hasFreeCharge = true;
+                }
                 subProbs[i].tag = subProbTypes[subProbTypesVec[i]];
                 subProbs[i].dom_p = subStructures[idxSubStructure].dom_p;
                 if (subStructures[idxSubStructure].dom_e.rows() > 0)
