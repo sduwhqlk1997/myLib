@@ -274,6 +274,7 @@ namespace SAW2_5D
         double D0 = 1.0;     // 电位移尺度
         double v0 = 1.0;     // 波速尺度
         double k0 = 1.0;     // 波数尺度
+        double Q0 = 1.0;     // 自由电荷特征量
     };
     class deviceArray
     {

@@ -1593,6 +1593,7 @@ namespace SAW2_5D
         dimScales.omega0 = std::sqrt(dimScales.c0 / (dimScales.rho0 * dimScales.L0 * dimScales.L0));
         dimScales.v0 = std::sqrt(dimScales.c0 / dimScales.rho0);
         dimScales.k0 = dimScales.omega0 / dimScales.v0;
+        dimScales.Q0 = dimScales.D0 * dimScales.L0 * dimScales.L0;
     }
     void deviceArray::dimensionless()
     {
