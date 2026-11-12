@@ -1704,6 +1704,10 @@ namespace SAW2_5D
                 {
                     subProbs[i].hasFreeCharge = true;
                 }
+                if (subStructures[idxSubStructure].type == IDT)
+                {
+                    subProbs[i].V0 = subStructures[idxSubStructure].V0;
+                }
                 subProbs[i].tag = subProbTypes[subProbTypesVec[i]];
                 subProbs[i].dom_p = subStructures[idxSubStructure].dom_p;
                 if (subStructures[idxSubStructure].dom_e.rows() > 0)
@@ -1717,6 +1721,15 @@ namespace SAW2_5D
                 for (Idx j = 1; j < subProbTypesVec[i].size(); ++j)
                 {
                     idxSubStructure = subProbTypesVec[i][j];
+                    if (subStructures[idxSubStructure].type == IDT ||
+                        subStructures[idxSubStructure].type == refGratShort)
+                    {
+                        subProbs[i].hasFreeCharge = true;
+                    }
+                    if (subStructures[idxSubStructure].type == IDT)
+                    {
+                        subProbs[i].V0 = subStructures[idxSubStructure].V0;
+                    }
                     Vec_d ori_old, ori_new;
                     ori_old = subStructures[idxSubStructure].dom_p.col(0);
                     Vec_d width = subStructures[idxSubStructure].dom_p.col(1) - subStructures[idxSubStructure].dom_p.col(0);

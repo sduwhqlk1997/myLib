@@ -289,6 +289,7 @@ namespace SAW2_5D
         {
             bool hasFreeCharge = false; // 是否有自由电荷
             Idx tag;                    // 子问题编号
+            double V0 = 0;              // 终端电压
             Mat_d dom_p, dom_e;
             Mat_t<double> dofIdx;
             SparseMat_t<Complex> K;
